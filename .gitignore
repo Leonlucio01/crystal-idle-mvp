@@ -1,0 +1,107 @@
+# =========================
+# Dependencies
+# =========================
+node_modules/
+
+# =========================
+# Environment variables
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# OS files
+# =========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =========================
+# Editor / IDE
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+# Build outputs
+# =========================
+dist/
+build/
+.cache/
+.parcel-cache/
+
+# =========================
+# Prisma / Database
+# =========================
+server/dev.db
+server/dev.db-journal
+server/prisma/dev.db
+server/prisma/dev.db-journal
+server/generated/prisma/
+
+# Keep Prisma migrations
+!server/prisma/migrations/
+
+# =========================
+# Unity generated folders
+# =========================
+unity/CrystalIdleUnity/Library/
+unity/CrystalIdleUnity/Temp/
+unity/CrystalIdleUnity/Obj/
+unity/CrystalIdleUnity/Build/
+unity/CrystalIdleUnity/Builds/
+unity/CrystalIdleUnity/Logs/
+unity/CrystalIdleUnity/UserSettings/
+unity/CrystalIdleUnity/MemoryCaptures/
+unity/CrystalIdleUnity/Recordings/
+unity/CrystalIdleUnity/.vs/
+
+# =========================
+# Unity generated files
+# =========================
+unity/CrystalIdleUnity/*.csproj
+unity/CrystalIdleUnity/*.sln
+unity/CrystalIdleUnity/*.suo
+unity/CrystalIdleUnity/*.user
+unity/CrystalIdleUnity/*.userprefs
+unity/CrystalIdleUnity/*.pidb
+unity/CrystalIdleUnity/*.booproj
+unity/CrystalIdleUnity/*.svd
+unity/CrystalIdleUnity/*.tmp
+
+# =========================
+# Unity package/cache generated files
+# =========================
+unity/CrystalIdleUnity/PackageCache/
+unity/CrystalIdleUnity/Packages/packages-lock.json
+
+# =========================
+# Unity IDE files
+# =========================
+unity/CrystalIdleUnity/.idea/
+unity/CrystalIdleUnity/.vscode/
+unity/CrystalIdleUnity/.vsconfig
+
+# =========================
+# Unity crash/debug files
+# =========================
+unity/CrystalIdleUnity/sysinfo.txt
+unity/CrystalIdleUnity/*.stackdump
+
+# =========================
+# Unity auto generated backup
+# =========================
+unity/CrystalIdleUnity/Assets/AssetStoreTools*
