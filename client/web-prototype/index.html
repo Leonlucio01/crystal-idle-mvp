@@ -3,168 +3,230 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Crystal Idle Web - Stable Polish</title>
+  <title>Crystal Idle - Web RPG</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
 <body>
-  <main class="app">
-    <section class="hero">
-      <div>
-        <p class="eyebrow">Crystal Idle MVP</p>
-        <h1>Web Prototype</h1>
-        <p>Cliente web estable conectado a tu API online de Render.</p>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="crystal-logo" aria-hidden="true"></div>
+        <div>
+          <p class="eyebrow">Crystal Idle</p>
+          <h1>Web RPG</h1>
+        </div>
       </div>
-      <div class="api">API: <strong>https://crystal-idle-api.onrender.com</strong></div>
-    </section>
 
-    <section class="grid">
-      <article class="card">
-        <h2>Cuenta</h2>
+      <div class="resource-strip" aria-label="Recursos del jugador">
+        <div class="resource-card"><span>Nivel</span><strong id="topLevel">0</strong></div>
+        <div class="resource-card gold"><span>Oro</span><strong id="topGold">0</strong></div>
+        <div class="resource-card diamond"><span>Diamantes</span><strong id="topDiamonds">0</strong></div>
+        <div class="resource-card"><span>Poder</span><strong id="topPower">0</strong></div>
+      </div>
+    </header>
 
-        <label>Email</label>
-        <input id="email" value="prodtest@example.com" />
-
-        <label>Password</label>
-        <input id="password" type="password" value="123456" />
-
-        <label>Personaje</label>
-        <input id="characterName" value="ProdHero" />
-
-        <div class="buttons">
-          <button id="registerBtn">Registrar</button>
-          <button id="loginBtn" class="secondary">Login</button>
-        </div>
-
-        <p id="authStatus" class="status">Sin sesión.</p>
-      </article>
-
-      <article class="card">
-        <div class="row">
-          <h2>Personaje</h2>
-          <button id="refreshCharacterBtn" class="small">Actualizar</button>
-        </div>
-
-        <div class="avatarBox">
-          <div class="avatar"></div>
-          <div>
-            <h3 id="name">---</h3>
-            <p id="className">---</p>
-          </div>
-        </div>
-
-        <div class="stats">
-          <div><span>Level</span><b id="level">0</b></div>
-          <div><span>XP</span><b id="xp">0</b></div>
-          <div><span>Gold</span><b id="gold">0</b></div>
-          <div><span>Power</span><b id="power">0</b></div>
-          <div><span>ATK</span><b id="atk">0</b></div>
-          <div><span>DEF</span><b id="def">0</b></div>
-          <div><span>HP</span><b id="hp">0</b></div>
-          <div><span>CRIT</span><b id="crit">0%</b></div>
-        </div>
-      </article>
-
-      <article class="card wide">
-        <div class="row">
-          <h2>Zonas</h2>
-          <span id="zoneStatus" class="zone-status">Inicia sesión para cambiar de zona.</span>
-        </div>
-        <div id="zoneList" class="zone-list"></div>
-      </article>
-
-      <article class="card">
-        <h2>Combate</h2>
-        <p>Zona: <strong id="zone">---</strong></p>
-
-        <label>Enemigo</label>
-        <select id="enemySelect"></select>
-
-        <div class="monsterBox">
-          <div class="monster-stage">
-            <div id="monsterSprite" class="monster"></div>
-            <div id="killPopup" class="kill-popup"></div>
-            <div id="rewardPopup" class="reward-popup"></div>
-          </div>
-          <div class="enemy-info">
-            <h3 id="enemyName">---</h3>
-            <p id="enemyStats">---</p>
-
-            <div class="enemy-hp-row">
-              <span>HP</span>
-              <strong id="enemyHpText">0 / 0</strong>
-            </div>
-            <div class="enemy-hp-bar">
-              <div id="enemyHpFill"></div>
+    <section class="dashboard">
+      <aside class="side-panel">
+        <article class="panel account-panel">
+          <div class="panel-title">
+            <span class="icon-dot"></span>
+            <div>
+              <p class="eyebrow">Cuenta</p>
+              <h2>Acceso</h2>
             </div>
           </div>
-        </div>
 
-        <div class="buttons">
-          <button id="killBtn">Matar enemigo</button>
-          <button id="autoFarmBtn" class="auto">Auto Farm: OFF</button>
-          <button id="offlineBtn" class="secondary">Reclamar offline</button>
-        </div>
+          <label for="email">Email</label>
+          <input id="email" value="prodtest@example.com" autocomplete="email" />
 
-        <div class="farm-bar">
-          <div id="farmProgress"></div>
-        </div>
+          <label for="password">Password</label>
+          <input id="password" type="password" value="123456" autocomplete="current-password" />
 
-        <p id="combatStatus" class="status">Esperando acción...</p>
-      </article>
+          <label for="characterName">Personaje</label>
+          <input id="characterName" value="ProdHero" />
 
-      <article class="card">
-        <div class="row">
-          <h2>Upgrades</h2>
-          <span id="upgradeGoldHint" class="gold-hint">Gold: 0</span>
-        </div>
+          <div class="button-row">
+            <button id="loginBtn" class="primary">Entrar</button>
+            <button id="registerBtn" class="ghost">Registrar</button>
+          </div>
 
-        <div class="upgradeGrid">
-          <button class="upgradeBtn" data-stat="ATK">
-            <span class="upgrade-title">Subir ATK</span>
-            <span class="upgrade-meta">Nivel -- · Coste -- gold</span>
-          </button>
+          <p id="authStatus" class="status">Sin sesión.</p>
+        </article>
 
-          <button class="upgradeBtn" data-stat="DEF">
-            <span class="upgrade-title">Subir DEF</span>
-            <span class="upgrade-meta">Nivel -- · Coste -- gold</span>
-          </button>
+        <article class="panel character-panel">
+          <div class="panel-title rowed">
+            <div class="panel-title compact">
+              <span class="icon-dot purple"></span>
+              <div>
+                <p class="eyebrow">Héroe</p>
+                <h2>Personaje</h2>
+              </div>
+            </div>
+            <button id="refreshCharacterBtn" class="small ghost">Actualizar</button>
+          </div>
 
-          <button class="upgradeBtn" data-stat="HP">
-            <span class="upgrade-title">Subir HP</span>
-            <span class="upgrade-meta">Nivel -- · Coste -- gold</span>
-          </button>
+          <div class="hero-card">
+            <div class="avatar" aria-hidden="true"></div>
+            <div class="hero-main">
+              <h3 id="name">---</h3>
+              <p id="className">---</p>
+              <div class="xp-block">
+                <div class="xp-line"><span>XP</span><strong id="xp">0</strong></div>
+                <div class="xp-bar"><div id="xpFill"></div></div>
+              </div>
+            </div>
+          </div>
 
-          <button class="upgradeBtn" data-stat="CRIT">
-            <span class="upgrade-title">Subir CRIT</span>
-            <span class="upgrade-meta">Nivel -- · Coste -- gold</span>
-          </button>
-        </div>
+          <div class="stat-grid">
+            <div><span>ATK</span><strong id="atk">0</strong></div>
+            <div><span>DEF</span><strong id="def">0</strong></div>
+            <div><span>HP</span><strong id="hp">0</strong></div>
+            <div><span>CRIT</span><strong id="crit">0%</strong></div>
+          </div>
+        </article>
+      </aside>
 
-        <p id="upgradeStatus" class="status">Inicia sesión para ver costos.</p>
-      </article>
+      <section class="main-panel">
+        <article class="combat-layout">
+          <section class="panel combat-panel">
+            <div class="combat-header">
+              <div>
+                <p class="eyebrow">Zona actual</p>
+                <h2 id="zone">---</h2>
+              </div>
+              <div class="combat-actions">
+                <button id="offlineBtn" class="ghost">Reclamar offline</button>
+                <button id="autoFarmBtn" class="auto">Auto Farm: OFF</button>
+              </div>
+            </div>
 
-      <article class="card wide">
-        <div class="row">
-          <h2>Ranking</h2>
-          <button id="leaderboardBtn" class="small">Actualizar</button>
-        </div>
+            <label for="enemySelect">Enemigo</label>
+            <select id="enemySelect"></select>
 
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Nombre</th>
-              <th>Clase</th>
-              <th>Level</th>
-              <th>Power</th>
-              <th>Zona</th>
-            </tr>
-          </thead>
-          <tbody id="leaderboard"></tbody>
-        </table>
-      </article>
+            <div class="battle-stage">
+              <div class="monster-arena">
+                <div id="monsterSprite" class="monster" aria-hidden="true"></div>
+                <div id="killPopup" class="kill-popup"></div>
+                <div id="rewardPopup" class="reward-popup"></div>
+              </div>
+
+              <div class="enemy-card">
+                <div class="enemy-heading">
+                  <div>
+                    <p class="eyebrow">Objetivo</p>
+                    <h3 id="enemyName">---</h3>
+                  </div>
+                  <button id="killBtn" class="primary attack-button">Atacar</button>
+                </div>
+
+                <p id="enemyStats" class="enemy-stats">---</p>
+
+                <div class="bar-row"><span>HP enemigo</span><strong id="enemyHpText">0 / 0</strong></div>
+                <div class="enemy-hp-bar"><div id="enemyHpFill"></div></div>
+
+                <div class="bar-row farm-row"><span>Ciclo Auto Farm</span><strong id="farmTimerText">0%</strong></div>
+                <div class="farm-bar"><div id="farmProgress"></div></div>
+              </div>
+            </div>
+
+            <p id="combatStatus" class="status big-status">Esperando acción...</p>
+          </section>
+
+          <section class="panel activity-panel">
+            <div class="panel-title">
+              <span class="icon-dot green"></span>
+              <div>
+                <p class="eyebrow">Actividad</p>
+                <h2>Registro</h2>
+              </div>
+            </div>
+            <div id="activityLog" class="activity-log"></div>
+          </section>
+        </article>
+
+        <article class="panel zones-panel">
+          <div class="panel-title rowed">
+            <div class="panel-title compact">
+              <span class="icon-dot cyan"></span>
+              <div>
+                <p class="eyebrow">Exploración</p>
+                <h2>Zonas</h2>
+              </div>
+            </div>
+            <span id="zoneStatus" class="pill">Inicia sesión para cambiar de zona.</span>
+          </div>
+          <div id="zoneList" class="zone-list"></div>
+        </article>
+
+        <section class="lower-grid">
+          <article class="panel upgrades-panel">
+            <div class="panel-title rowed">
+              <div class="panel-title compact">
+                <span class="icon-dot gold-dot"></span>
+                <div>
+                  <p class="eyebrow">Progresión</p>
+                  <h2>Upgrades</h2>
+                </div>
+              </div>
+              <span id="upgradeGoldHint" class="pill gold-pill">Gold: 0</span>
+            </div>
+
+            <div class="upgrade-grid">
+              <button class="upgradeBtn" data-stat="ATK"><span class="upgrade-title">Subir ATK</span><span class="upgrade-meta">Nivel -- · Coste -- gold</span></button>
+              <button class="upgradeBtn" data-stat="DEF"><span class="upgrade-title">Subir DEF</span><span class="upgrade-meta">Nivel -- · Coste -- gold</span></button>
+              <button class="upgradeBtn" data-stat="HP"><span class="upgrade-title">Subir HP</span><span class="upgrade-meta">Nivel -- · Coste -- gold</span></button>
+              <button class="upgradeBtn" data-stat="CRIT"><span class="upgrade-title">Subir CRIT</span><span class="upgrade-meta">Nivel -- · Coste -- gold</span></button>
+            </div>
+
+            <p id="upgradeStatus" class="status">Inicia sesión para ver costos.</p>
+          </article>
+
+          <article class="panel leaderboard-panel">
+            <div class="panel-title rowed">
+              <div class="panel-title compact">
+                <span class="icon-dot red-dot"></span>
+                <div>
+                  <p class="eyebrow">Competencia</p>
+                  <h2>Ranking</h2>
+                </div>
+              </div>
+              <button id="leaderboardBtn" class="small ghost">Actualizar</button>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Nombre</th>
+                    <th>Clase</th>
+                    <th>Level</th>
+                    <th>Power</th>
+                    <th>Zona</th>
+                  </tr>
+                </thead>
+                <tbody id="leaderboard"></tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+      </section>
     </section>
   </main>
+
+  <div id="offlineModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="offlineTitle">
+    <div class="modal-card">
+      <p class="eyebrow">Recompensa offline</p>
+      <h2 id="offlineTitle">Mientras estabas fuera</h2>
+      <div class="offline-grid">
+        <div><span>Tiempo</span><strong id="offlineTime">0s</strong></div>
+        <div><span>Kills</span><strong id="offlineKills">0</strong></div>
+        <div><span>Oro</span><strong id="offlineGold">0</strong></div>
+        <div><span>XP</span><strong id="offlineXp">0</strong></div>
+      </div>
+      <button id="closeOfflineModal" class="primary">Continuar</button>
+    </div>
+  </div>
 
   <script src="./app.js"></script>
 </body>

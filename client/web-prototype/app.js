@@ -24,8 +24,53 @@ async function api(path, options = {}) {
   return data;
 }
 
+function formatNumber(value) {
+  const number = Number(value || 0);
+  return new Intl.NumberFormat("es-ES", { maximumFractionDigits: 0 }).format(number);
+}
+
+function formatDuration(seconds) {
+  const total = Number(seconds || 0);
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = Math.floor(total % 60);
+  if (h > 0) return `${h}h ${m}m ${s}s`;
+  if (m > 0) return `${m}m ${s}s`;
+  return `${s}s`;
+}
+
 function status(id, msg) {
-  $(id).textContent = msg;
+  const el = $(id);
+  if (el) el.textContent = msg;
+}
+
+function addLog(message, type = "info") {
+  const log = $("activityLog");
+  if (!log) return;
+  const time = new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  const item = document.createElement("div");
+  item.className = `log-item ${type}`;
+  item.innerHTML = `<strong>${time}</strong> · ${message}`;
+  log.prepend(item);
+  while (log.children.length > 12) log.lastElementChild.remove();
+}
+
+function setTopResources(c) {
+  $("topLevel").textContent = formatNumber(c?.level ?? 0);
+  $("topGold").textContent = formatNumber(c?.gold ?? 0);
+  $("topDiamonds").textContent = formatNumber(c?.diamonds ?? 0);
+  $("topPower").textContent = formatNumber(c?.power ?? 0);
+}
+
+function setXpProgress(c) {
+  const xp = Number(c?.xp || 0);
+  const level = Number(c?.level || 1);
+  const nextXp = Number(c?.nextLevelXp || c?.xpToNextLevel || level * level * 100 || 100);
+  const currentLevelStart = Number(c?.currentLevelStartXp || 0);
+  const gainedThisLevel = Math.max(0, xp - currentLevelStart);
+  const neededThisLevel = Math.max(1, nextXp - currentLevelStart);
+  const percent = Math.max(0, Math.min(100, (gainedThisLevel / neededThisLevel) * 100));
+  $("xpFill").style.width = `${percent}%`;
 }
 
 async function loadZones() {
@@ -33,9 +78,11 @@ async function loadZones() {
     const data = await api("/zones");
     zones = data.data || [];
     renderZones();
+    addLog("Zonas cargadas desde Render.");
   } catch (e) {
     console.error("Error loading zones:", e);
     status("combatStatus", `Error cargando zonas: ${e.message}`);
+    addLog(`Error cargando zonas: ${e.message}`, "error");
   }
 }
 
@@ -69,19 +116,14 @@ function renderZones() {
   const currentZoneId = character?.currentZoneId || character?.currentZone?.id;
   const characterLevel = character?.level ?? 0;
 
-  $("zoneStatus").textContent = character
-    ? `Nivel actual: ${characterLevel}`
-    : "Inicia sesión para cambiar de zona.";
+  status("zoneStatus", character ? `Nivel actual: ${characterLevel}` : "Inicia sesión para cambiar de zona.");
 
   zones.forEach((zone) => {
     const isCurrent = zone.id === currentZoneId;
     const isUnlocked = character && characterLevel >= zone.requiredLevel;
 
     const card = document.createElement("div");
-    card.className =
-      "zone-card" +
-      (isCurrent ? " current" : "") +
-      (!isUnlocked ? " locked" : "");
+    card.className = "zone-card" + (isCurrent ? " current" : "") + (!isUnlocked ? " locked" : "");
 
     const enemyNames = (zone.enemies || [])
       .map((enemy) => enemy.isBoss ? `${enemy.name} (Boss)` : enemy.name)
@@ -95,8 +137,8 @@ function renderZones() {
         <span class="badge">Nivel ${zone.requiredLevel}+</span>
       </div>
       <h3>${zone.name}</h3>
-      <p>${zone.description || ""}</p>
-      <p><strong>Enemigos:</strong> ${enemyNames}</p>
+      <p>${zone.description || "Zona de combate y farmeo."}</p>
+      <p><strong>Enemigos:</strong> ${enemyNames || "Sin enemigos"}</p>
       <button data-zone-id="${zone.id}" ${!isUnlocked || isCurrent ? "disabled" : ""}>
         ${isCurrent ? "Zona actual" : isUnlocked ? "Entrar" : `Requiere nivel ${zone.requiredLevel}`}
       </button>
@@ -104,7 +146,6 @@ function renderZones() {
 
     const button = card.querySelector("button");
     button.onclick = () => changeZone(zone.id);
-
     container.appendChild(card);
   });
 }
@@ -113,7 +154,7 @@ function renderUpgradeButtons() {
   const gold = character?.gold ?? 0;
   const buttons = document.querySelectorAll(".upgradeBtn");
 
-  $("upgradeGoldHint").textContent = `Gold: ${gold}`;
+  status("upgradeGoldHint", `Gold: ${formatNumber(gold)}`);
 
   buttons.forEach((button) => {
     const stat = button.dataset.stat;
@@ -122,18 +163,14 @@ function renderUpgradeButtons() {
     if (!character) {
       button.disabled = true;
       button.classList.remove("affordable", "expensive");
-      button.innerHTML =
-        `<span class="upgrade-title">Subir ${stat}</span>` +
-        `<span class="upgrade-meta">Inicia sesión para ver costo</span>`;
+      button.innerHTML = `<span class="upgrade-title">Subir ${stat}</span><span class="upgrade-meta">Inicia sesión para ver costo</span>`;
       return;
     }
 
     if (!upgrade) {
       button.disabled = false;
       button.classList.remove("affordable", "expensive");
-      button.innerHTML =
-        `<span class="upgrade-title">Subir ${stat}</span>` +
-        `<span class="upgrade-meta">Actualizando costo...</span>`;
+      button.innerHTML = `<span class="upgrade-title">Subir ${stat}</span><span class="upgrade-meta">Actualizando costo...</span>`;
       return;
     }
 
@@ -146,27 +183,26 @@ function renderUpgradeButtons() {
 
     button.innerHTML =
       `<span class="upgrade-title">Subir ${stat}</span>` +
-      `<span class="upgrade-meta">Nivel ${upgrade.level} · Coste ${cost} gold</span>` +
+      `<span class="upgrade-meta">Nivel ${upgrade.level} · Coste ${formatNumber(cost)} gold</span>` +
       (!canAfford
-        ? `<span class="upgrade-warning">Necesitas ${cost - gold} gold más</span>`
+        ? `<span class="upgrade-warning">Faltan ${formatNumber(cost - gold)} gold</span>`
         : `<span class="upgrade-meta">Disponible</span>`);
   });
 }
 
 function renderCharacter(c) {
   character = normalizeCharacter(c);
+  setTopResources(character);
 
-  $("name").textContent = character?.name || "---";
-  $("className").textContent = character?.class || "---";
-  $("level").textContent = character?.level ?? 0;
-  $("xp").textContent = character?.xp ?? 0;
-  $("gold").textContent = character?.gold ?? 0;
-  $("power").textContent = character?.power ?? 0;
-  $("atk").textContent = character?.atk ?? 0;
-  $("def").textContent = character?.def ?? 0;
-  $("hp").textContent = `${character?.currentHp ?? 0}/${character?.maxHp ?? 0}`;
-  $("crit").textContent = `${Math.round((character?.critChance ?? 0) * 1000) / 10}%`;
-  $("zone").textContent = character?.currentZone?.name || "---";
+  status("name", character?.name || "---");
+  status("className", character?.class || "---");
+  status("xp", formatNumber(character?.xp ?? 0));
+  status("atk", formatNumber(character?.atk ?? 0));
+  status("def", formatNumber(character?.def ?? 0));
+  status("hp", `${formatNumber(character?.currentHp ?? 0)}/${formatNumber(character?.maxHp ?? 0)}`);
+  status("crit", `${Math.round((character?.critChance ?? 0) * 1000) / 10}%`);
+  status("zone", character?.currentZone?.name || "---");
+  setXpProgress(character);
 
   let enemies = character?.currentZone?.enemies || [];
 
@@ -187,17 +223,18 @@ function renderCharacter(c) {
 
 function renderEnemies(enemies) {
   const previousEnemyId = selectedEnemy?.id;
-  $("enemySelect").innerHTML = "";
+  const enemySelect = $("enemySelect");
+  enemySelect.innerHTML = "";
 
   enemies.forEach((e) => {
     const o = document.createElement("option");
     o.value = e.id;
     o.textContent = `${e.name}${e.isBoss ? " (Boss)" : ""}`;
-    $("enemySelect").appendChild(o);
+    enemySelect.appendChild(o);
   });
 
   selectedEnemy = enemies.find((enemy) => enemy.id === previousEnemyId) || enemies[0] || null;
-  if (selectedEnemy) $("enemySelect").value = selectedEnemy.id;
+  if (selectedEnemy) enemySelect.value = selectedEnemy.id;
 
   resetEnemyHp();
   renderEnemy();
@@ -212,23 +249,21 @@ function renderEnemyHp() {
   const maxHp = selectedEnemy?.maxHp || 0;
   const hp = Math.max(0, Math.min(enemyCurrentHp, maxHp));
   const percent = maxHp > 0 ? (hp / maxHp) * 100 : 0;
-  $("enemyHpText").textContent = `${Math.ceil(hp)} / ${maxHp}`;
+  status("enemyHpText", `${Math.ceil(hp)} / ${formatNumber(maxHp)}`);
   $("enemyHpFill").style.width = `${percent}%`;
 }
 
 function renderEnemy() {
   if (!selectedEnemy) {
-    $("enemyName").textContent = "---";
-    $("enemyStats").textContent = "---";
-    $("enemyHpText").textContent = "0 / 0";
+    status("enemyName", "---");
+    status("enemyStats", "---");
+    status("enemyHpText", "0 / 0");
     $("enemyHpFill").style.width = "0%";
     return;
   }
 
-  $("enemyName").textContent = selectedEnemy.name;
-  $("enemyStats").textContent =
-    `HP ${selectedEnemy.maxHp} | ATK ${selectedEnemy.atk} | DEF ${selectedEnemy.def} | XP ${selectedEnemy.xpReward} | Gold ${selectedEnemy.goldReward}`;
-
+  status("enemyName", selectedEnemy.name);
+  status("enemyStats", `HP ${formatNumber(selectedEnemy.maxHp)} | ATK ${formatNumber(selectedEnemy.atk)} | DEF ${formatNumber(selectedEnemy.def)} | XP ${formatNumber(selectedEnemy.xpReward)} | Gold ${formatNumber(selectedEnemy.goldReward)}`);
   renderEnemyHp();
 }
 
@@ -246,7 +281,7 @@ function showKillPopup() {
 
 function showRewardPopup(gold, xp) {
   const popup = $("rewardPopup");
-  popup.textContent = `+${gold} gold  +${xp} XP`;
+  popup.textContent = `+${formatNumber(gold)} gold  +${formatNumber(xp)} XP`;
   popup.classList.remove("show");
   void popup.offsetWidth;
   popup.classList.add("show");
@@ -286,10 +321,12 @@ async function register() {
     localStorage.setItem("crystal_idle_token", token);
 
     status("authStatus", "Registro correcto.");
+    addLog("Registro correcto. Personaje creado.", "success");
     await loadCharacter();
     loadLeaderboard();
   } catch (e) {
     status("authStatus", `Error: ${e.message}`);
+    addLog(`Error de registro: ${e.message}`, "error");
   }
 }
 
@@ -299,20 +336,19 @@ async function login() {
 
     const data = await api("/auth/login", {
       method: "POST",
-      body: JSON.stringify({
-        email: $("email").value.trim(),
-        password: $("password").value,
-      }),
+      body: JSON.stringify({ email: $("email").value.trim(), password: $("password").value }),
     });
 
     token = data.token;
     localStorage.setItem("crystal_idle_token", token);
 
     status("authStatus", "Sesión iniciada.");
+    addLog("Sesión iniciada correctamente.", "success");
     await loadCharacter();
     loadLeaderboard();
   } catch (e) {
     status("authStatus", `Error: ${e.message}`);
+    addLog(`Error de login: ${e.message}`, "error");
   }
 }
 
@@ -324,6 +360,7 @@ async function loadCharacter() {
     renderCharacter(data.data);
   } catch (e) {
     status("authStatus", `Error: ${e.message}`);
+    addLog(`Error cargando personaje: ${e.message}`, "error");
   }
 }
 
@@ -332,7 +369,6 @@ async function changeZone(zoneId) {
 
   try {
     if (autoFarmEnabled) toggleAutoFarm();
-
     status("zoneStatus", "Cambiando zona...");
 
     const data = await api("/character/change-zone", {
@@ -341,10 +377,12 @@ async function changeZone(zoneId) {
     });
 
     status("zoneStatus", data.message);
+    addLog(data.message || "Zona cambiada.", "success");
     renderCharacter(data.data);
     loadLeaderboard();
   } catch (e) {
     status("zoneStatus", `Error: ${e.message}`);
+    addLog(`Error cambiando zona: ${e.message}`, "error");
   }
 }
 
@@ -360,15 +398,16 @@ async function killEnemy() {
     });
 
     const r = data.data;
-
     simulateKillVisual();
     showRewardPopup(r.goldEarned, r.xpEarned);
 
-    status("combatStatus", `${data.message}. +${r.goldEarned} gold, +${r.xpEarned} XP.`);
+    status("combatStatus", `${data.message}. +${formatNumber(r.goldEarned)} gold, +${formatNumber(r.xpEarned)} XP.`);
+    addLog(`Derrotaste a ${selectedEnemy.name}: +${formatNumber(r.goldEarned)} oro, +${formatNumber(r.xpEarned)} XP.`, "combat");
     await loadCharacter();
     loadLeaderboard();
   } catch (e) {
     status("combatStatus", `Error: ${e.message}`);
+    addLog(`Error en combate: ${e.message}`, "error");
   }
 }
 
@@ -382,6 +421,7 @@ function updateFarmButton() {
 function resetFarmProgress() {
   farmProgress = 0;
   $("farmProgress").style.width = "0%";
+  status("farmTimerText", "0%");
 }
 
 function startFarmProgress() {
@@ -392,6 +432,7 @@ function startFarmProgress() {
     farmProgress += 100 / (AUTO_FARM_SECONDS * 10);
     if (farmProgress > 100) farmProgress = 100;
     $("farmProgress").style.width = `${farmProgress}%`;
+    status("farmTimerText", `${Math.round(farmProgress)}%`);
 
     if (selectedEnemy) {
       const simulatedHp = selectedEnemy.maxHp - (selectedEnemy.maxHp * farmProgress) / 100;
@@ -419,6 +460,7 @@ function toggleAutoFarm() {
 
   if (autoFarmEnabled) {
     status("combatStatus", "Auto Farm iniciado...");
+    addLog("Auto Farm iniciado.", "success");
     autoFarmTick();
     autoFarmInterval = setInterval(() => autoFarmTick(), AUTO_FARM_SECONDS * 1000);
   } else {
@@ -427,7 +469,16 @@ function toggleAutoFarm() {
     resetFarmProgress();
     resetEnemyHp();
     status("combatStatus", "Auto Farm detenido.");
+    addLog("Auto Farm detenido.");
   }
+}
+
+function showOfflineModal(reward) {
+  status("offlineTime", formatDuration(reward.secondsOffline));
+  status("offlineKills", formatNumber(reward.kills));
+  status("offlineGold", formatNumber(reward.goldEarned));
+  status("offlineXp", formatNumber(reward.xpEarned));
+  $("offlineModal").classList.remove("hidden");
 }
 
 async function claimOffline() {
@@ -437,17 +488,19 @@ async function claimOffline() {
     const data = await api("/idle/claim-offline", { method: "POST" });
     const r = data.data;
 
-    status(
-      "combatStatus",
-      `${data.message}. ${r.secondsOffline}s, kills ${r.kills}, +${r.goldEarned} gold, +${r.xpEarned} XP.`
-    );
+    status("combatStatus", `${data.message}. ${formatDuration(r.secondsOffline)}, kills ${formatNumber(r.kills)}, +${formatNumber(r.goldEarned)} gold, +${formatNumber(r.xpEarned)} XP.`);
+    addLog(`Offline reclamado: ${formatDuration(r.secondsOffline)}, ${formatNumber(r.kills)} kills, +${formatNumber(r.goldEarned)} oro, +${formatNumber(r.xpEarned)} XP.`, "success");
 
-    if (r.goldEarned > 0 || r.xpEarned > 0) showRewardPopup(r.goldEarned, r.xpEarned);
+    if (r.goldEarned > 0 || r.xpEarned > 0) {
+      showRewardPopup(r.goldEarned, r.xpEarned);
+      showOfflineModal(r);
+    }
 
     await loadCharacter();
     loadLeaderboard();
   } catch (e) {
     status("combatStatus", `Error: ${e.message}`);
+    addLog(`Error reclamando offline: ${e.message}`, "error");
   }
 }
 
@@ -463,10 +516,7 @@ async function upgrade(stat) {
     }
 
     if ((character?.gold ?? 0) < upgradeInfo.currentCost) {
-      return status(
-        "upgradeStatus",
-        `Necesitas ${upgradeInfo.currentCost - character.gold} gold más para subir ${stat}.`
-      );
+      return status("upgradeStatus", `Necesitas ${formatNumber(upgradeInfo.currentCost - character.gold)} gold más para subir ${stat}.`);
     }
 
     status("upgradeStatus", `Mejorando ${stat}...`);
@@ -477,17 +527,20 @@ async function upgrade(stat) {
     });
 
     status("upgradeStatus", data.message);
+    addLog(`${data.message || `Upgrade ${stat} comprado.`}`, "success");
     await loadCharacter();
     loadLeaderboard();
   } catch (e) {
     status("upgradeStatus", `Error: ${e.message}`);
+    addLog(`Error comprando upgrade: ${e.message}`, "error");
   }
 }
 
 async function loadLeaderboard() {
   try {
     const data = await api("/leaderboard/power");
-    $("leaderboard").innerHTML = "";
+    const tbody = $("leaderboard");
+    tbody.innerHTML = "";
 
     data.data.forEach((row) => {
       const tr = document.createElement("tr");
@@ -495,10 +548,10 @@ async function loadLeaderboard() {
         `<td>${row.rank}</td>` +
         `<td>${row.name}</td>` +
         `<td>${row.class}</td>` +
-        `<td>${row.level}</td>` +
-        `<td>${row.power}</td>` +
+        `<td>${formatNumber(row.level)}</td>` +
+        `<td>${formatNumber(row.power)}</td>` +
         `<td>${row.currentZone?.name || "---"}</td>`;
-      $("leaderboard").appendChild(tr);
+      tbody.appendChild(tr);
     });
   } catch (e) {
     $("leaderboard").innerHTML = `<tr><td colspan="6">Error: ${e.message}</td></tr>`;
@@ -512,6 +565,10 @@ $("killBtn").onclick = killEnemy;
 $("autoFarmBtn").onclick = toggleAutoFarm;
 $("offlineBtn").onclick = claimOffline;
 $("leaderboardBtn").onclick = loadLeaderboard;
+$("closeOfflineModal").onclick = () => $("offlineModal").classList.add("hidden");
+$("offlineModal").onclick = (event) => {
+  if (event.target.id === "offlineModal") $("offlineModal").classList.add("hidden");
+};
 
 document.querySelectorAll(".upgradeBtn").forEach((button) => {
   button.onclick = () => upgrade(button.dataset.stat);
@@ -530,11 +587,14 @@ $("enemySelect").onchange = () => {
 };
 
 (async () => {
+  addLog("Cliente web iniciado.");
+  setTopResources(null);
   await loadZones();
   await loadLeaderboard();
 
   if (token) {
     status("authStatus", "Token guardado encontrado.");
+    addLog("Token guardado encontrado. Cargando personaje...");
     await loadCharacter();
   } else {
     renderUpgradeButtons();
