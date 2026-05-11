@@ -88,6 +88,7 @@ unity/CrystalIdleUnity/*.tmp
 unity/CrystalIdleUnity/PackageCache/
 unity/CrystalIdleUnity/Packages/packages-lock.json
 
+
 # =========================
 # Unity IDE files
 # =========================
@@ -105,3 +106,9 @@ unity/CrystalIdleUnity/*.stackdump
 # Unity auto generated backup
 # =========================
 unity/CrystalIdleUnity/Assets/AssetStoreTools*
+unity/CrystalIdleUnity/Assets/Scripts/UI/GameSceneLayout.cs
+unity/CrystalIdleUnity/Assets/Scripts/UI/GameUI.cs
+
+# Paid Unity Asset Store assets - local only
+unity/CrystalIdleUnity/Assets/Layer Lab/
+unity/CrystalIdleUnity/Assets/Layer Lab.meta

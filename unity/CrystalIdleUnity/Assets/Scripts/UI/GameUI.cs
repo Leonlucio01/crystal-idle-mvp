@@ -25,6 +25,11 @@ public class GameUI : MonoBehaviour
     public Button changeZoneButton;
     public TMP_Text zoneStatusText;
 
+    [Header("Enemy Preview UI")]
+    public TMP_Text enemyNameText;
+    public TMP_Text enemyStatsText;
+    public TMP_Text enemyRewardText;
+
     [Header("Combat UI")]
     public TMP_Dropdown enemyDropdown;
     public Button killEnemyButton;
@@ -36,10 +41,12 @@ public class GameUI : MonoBehaviour
 
     private CharacterData currentCharacter;
     private readonly List<ZoneData> allZones = new List<ZoneData>();
+    private readonly List<EnemyTypeData> previewEnemies = new List<EnemyTypeData>();
     private readonly List<EnemyTypeData> currentEnemies = new List<EnemyTypeData>();
 
-    private string currentZoneName = "";
     private string currentZoneId = "";
+    private string currentZoneName = "";
+    private bool suppressDropdownEvents;
 
     private void Awake()
     {
@@ -59,6 +66,12 @@ public class GameUI : MonoBehaviour
 
         if (changeZoneButton != null)
             changeZoneButton.onClick.AddListener(ChangeSelectedZone);
+
+        if (zoneDropdown != null)
+            zoneDropdown.onValueChanged.AddListener(OnZoneDropdownChanged);
+
+        if (enemyDropdown != null)
+            enemyDropdown.onValueChanged.AddListener(OnEnemyDropdownChanged);
 
         LoadCharacter();
     }
@@ -83,6 +96,10 @@ public class GameUI : MonoBehaviour
         changeZoneButton ??= FindButton("ChangeZoneButton");
         zoneStatusText ??= FindTMPText("ZoneStatusText");
 
+        enemyNameText ??= FindTMPText("EnemyNameText");
+        enemyStatsText ??= FindTMPText("EnemyStatsText");
+        enemyRewardText ??= FindTMPText("EnemyRewardText");
+
         enemyDropdown ??= FindTMPDropdown("EnemyDropdown");
         killEnemyButton ??= FindButton("KillEnemyButton");
         combatStatusText ??= FindTMPText("CombatStatusText");
@@ -93,7 +110,7 @@ public class GameUI : MonoBehaviour
 
     private void LoadCharacter()
     {
-        SetStatus("Cargando personaje...");
+        SetStatus("Sincronizando héroe...");
 
         StartCoroutine(ApiClient.Instance.GetJson<CharacterResponse>(
             "/character/me",
@@ -101,7 +118,7 @@ public class GameUI : MonoBehaviour
             {
                 if (!response.success)
                 {
-                    SetStatus("Error: " + response.message);
+                    SetStatus("No se pudo cargar el héroe: " + response.message);
                     return;
                 }
 
@@ -109,11 +126,11 @@ public class GameUI : MonoBehaviour
                 CacheZoneFromCharacter(currentCharacter);
                 RenderCharacter(currentCharacter);
                 LoadZones();
-                SetStatus("Personaje cargado.");
+                SetStatus("Héroe listo para explorar.");
             },
             error =>
             {
-                SetStatus("Error: " + error);
+                SetStatus("Error de conexión: " + error);
             }
         ));
     }
@@ -126,7 +143,7 @@ public class GameUI : MonoBehaviour
             {
                 if (!response.success)
                 {
-                    SetZoneStatus("Error cargando zonas: " + response.message);
+                    SetZoneStatus("No se pudieron abrir las zonas: " + response.message);
                     return;
                 }
 
@@ -135,27 +152,26 @@ public class GameUI : MonoBehaviour
                 if (response.data != null)
                     allZones.AddRange(response.data);
 
-                RenderZoneDropdown();
+                ZoneData currentZone = FindCurrentZone();
 
-                ZoneData currentZone = FindCurrentZone(allZones.ToArray());
-
-                if (currentZone == null)
+                if (currentZone != null)
                 {
-                    SetCombatStatus("No se encontró la zona actual.");
-                    return;
+                    currentZoneId = currentZone.id;
+                    currentZoneName = currentZone.name;
+                    LoadEnemiesFromZone(currentZone, true);
                 }
 
-                currentZoneId = currentZone.id;
-                currentZoneName = currentZone.name;
+                RenderCharacter(currentCharacter);
+                RenderZoneDropdown();
 
-                if (zoneText != null)
-                    zoneText.text = "Zone: " + currentZoneName;
+                int currentZoneIndex = GetCurrentZoneIndex();
+                PreviewZoneByIndex(currentZoneIndex);
 
-                LoadEnemiesFromZone(currentZone);
+                SetZoneStatus("Elige una zona para inspeccionar sus enemigos.");
             },
             error =>
             {
-                SetZoneStatus("Error cargando zonas: " + error);
+                SetZoneStatus("Error de conexión al cargar zonas: " + error);
             }
         ));
     }
@@ -165,15 +181,17 @@ public class GameUI : MonoBehaviour
         if (zoneDropdown == null)
             return;
 
+        suppressDropdownEvents = true;
+
         zoneDropdown.ClearOptions();
 
         List<string> options = new List<string>();
-        int selectedIndex = 0;
 
         for (int i = 0; i < allZones.Count; i++)
         {
             ZoneData zone = allZones[i];
-            bool unlocked = currentCharacter != null && currentCharacter.level >= zone.requiredLevel;
+
+            bool unlocked = IsZoneUnlocked(zone);
             bool isCurrent = zone.id == currentZoneId;
 
             string label = zone.name + " | Nivel " + zone.requiredLevel;
@@ -186,16 +204,55 @@ public class GameUI : MonoBehaviour
                 label += " | Bloqueada";
 
             options.Add(label);
-
-            if (isCurrent)
-                selectedIndex = i;
         }
 
         zoneDropdown.AddOptions(options);
-        zoneDropdown.value = selectedIndex;
+
+        int currentIndex = GetCurrentZoneIndex();
+        if (currentIndex >= 0)
+            zoneDropdown.value = currentIndex;
+
         zoneDropdown.RefreshShownValue();
 
-        SetZoneStatus("Selecciona una zona.");
+        suppressDropdownEvents = false;
+    }
+
+    private void OnZoneDropdownChanged(int index)
+    {
+        if (suppressDropdownEvents)
+            return;
+
+        PreviewZoneByIndex(index);
+    }
+
+    private void PreviewZoneByIndex(int index)
+    {
+        if (index < 0 || index >= allZones.Count)
+            return;
+
+        ZoneData selectedZone = allZones[index];
+
+        bool unlocked = IsZoneUnlocked(selectedZone);
+        bool isCurrent = selectedZone.id == currentZoneId;
+
+        if (isCurrent)
+            SetZoneStatus("Zona actual: " + selectedZone.name);
+        else if (unlocked)
+            SetZoneStatus(selectedZone.name + " está disponible. Pulsa Entrar zona.");
+        else
+            SetZoneStatus("Zona bloqueada. Requiere nivel " + selectedZone.requiredLevel + ".");
+
+        SetChangeZoneButtonEnabled(unlocked && !isCurrent);
+
+        previewEnemies.Clear();
+
+        if (selectedZone.enemies != null)
+            previewEnemies.AddRange(selectedZone.enemies);
+
+        RenderEnemyDropdown(previewEnemies);
+
+        if (isCurrent)
+            LoadEnemiesFromZone(selectedZone, false);
     }
 
     private void ChangeSelectedZone()
@@ -216,7 +273,7 @@ public class GameUI : MonoBehaviour
 
         ZoneData selectedZone = allZones[index];
 
-        if (currentCharacter != null && currentCharacter.level < selectedZone.requiredLevel)
+        if (!IsZoneUnlocked(selectedZone))
         {
             SetZoneStatus("Zona bloqueada. Requiere nivel " + selectedZone.requiredLevel + ".");
             return;
@@ -228,7 +285,7 @@ public class GameUI : MonoBehaviour
             return;
         }
 
-        SetZoneStatus("Entrando a " + selectedZone.name + "...");
+        SetZoneStatus("Abriendo portal a " + selectedZone.name + "...");
 
         ChangeZoneRequest body = new ChangeZoneRequest
         {
@@ -244,7 +301,7 @@ public class GameUI : MonoBehaviour
             {
                 if (!response.success)
                 {
-                    SetZoneStatus("Error: " + response.message);
+                    SetZoneStatus("No se pudo entrar: " + response.message);
                     return;
                 }
 
@@ -254,87 +311,148 @@ public class GameUI : MonoBehaviour
 
                 RestoreCachedZone(currentCharacter);
                 RenderCharacter(currentCharacter);
+                LoadEnemiesFromZone(selectedZone, true);
                 RenderZoneDropdown();
-                LoadEnemiesFromZone(selectedZone);
 
-                SetZoneStatus("Entraste a " + selectedZone.name + ".");
+                int currentZoneIndex = GetCurrentZoneIndex();
+                if (zoneDropdown != null && currentZoneIndex >= 0)
+                {
+                    suppressDropdownEvents = true;
+                    zoneDropdown.value = currentZoneIndex;
+                    zoneDropdown.RefreshShownValue();
+                    suppressDropdownEvents = false;
+                }
+
+                SetChangeZoneButtonEnabled(false);
+                SetZoneStatus("Zona activa: " + selectedZone.name + ".");
             },
             error =>
             {
-                SetZoneStatus("Error: " + error);
+                SetZoneStatus("Error de conexión: " + error);
             }
         ));
     }
 
-    private void LoadEnemiesFromZone(ZoneData zone)
+    private void LoadEnemiesFromZone(ZoneData zone, bool renderDropdown)
     {
         currentEnemies.Clear();
 
         if (zone != null && zone.enemies != null)
             currentEnemies.AddRange(zone.enemies);
 
-        RenderEnemyDropdown();
+        if (renderDropdown)
+            RenderEnemyDropdown(currentEnemies);
     }
 
-    private ZoneData FindCurrentZone(ZoneData[] zones)
-    {
-        if (zones == null || currentCharacter == null)
-            return null;
-
-        string zoneId = currentCharacter.currentZoneId;
-
-        if (string.IsNullOrEmpty(zoneId) && currentCharacter.currentZone != null)
-            zoneId = currentCharacter.currentZone.id;
-
-        if (string.IsNullOrEmpty(zoneId))
-            zoneId = currentZoneId;
-
-        foreach (ZoneData zone in zones)
-        {
-            if (zone.id == zoneId)
-                return zone;
-        }
-
-        return null;
-    }
-
-    private void RenderEnemyDropdown()
+    private void RenderEnemyDropdown(List<EnemyTypeData> enemies)
     {
         if (enemyDropdown == null)
             return;
+
+        suppressDropdownEvents = true;
 
         enemyDropdown.ClearOptions();
 
         List<string> options = new List<string>();
 
-        foreach (EnemyTypeData enemy in currentEnemies)
+        foreach (EnemyTypeData enemy in enemies)
         {
             string label = enemy.name;
 
             if (enemy.isBoss)
                 label += " (Boss)";
 
-            label += $" | Gold {enemy.goldReward} | XP {enemy.xpReward}";
+            label += $" | Oro {enemy.goldReward} | XP {enemy.xpReward}";
             options.Add(label);
         }
 
         enemyDropdown.AddOptions(options);
+        enemyDropdown.value = 0;
+        enemyDropdown.RefreshShownValue();
 
-        if (currentEnemies.Count > 0)
+        suppressDropdownEvents = false;
+
+        if (enemies.Count > 0)
         {
-            enemyDropdown.value = 0;
-            enemyDropdown.RefreshShownValue();
-            SetCombatStatus("Enemigos cargados.");
+            PreviewEnemy(enemies[0]);
+            SetCombatStatus("Selecciona un objetivo y ataca.");
         }
         else
         {
-            SetCombatStatus("No hay enemigos en esta zona.");
+            ClearEnemyPreview();
+            SetCombatStatus("No hay enemigos visibles en esta zona.");
         }
+    }
+
+    private void OnEnemyDropdownChanged(int index)
+    {
+        if (suppressDropdownEvents)
+            return;
+
+        ZoneData selectedZone = GetSelectedZone();
+
+        if (selectedZone == null || selectedZone.enemies == null)
+            return;
+
+        if (index < 0 || index >= selectedZone.enemies.Length)
+            return;
+
+        PreviewEnemy(selectedZone.enemies[index]);
+    }
+
+    private void PreviewEnemy(EnemyTypeData enemy)
+    {
+        if (enemy == null)
+        {
+            ClearEnemyPreview();
+            return;
+        }
+
+        if (enemyNameText != null)
+            enemyNameText.text = enemy.isBoss ? enemy.name + " (Boss)" : enemy.name;
+
+        if (enemyStatsText != null)
+            enemyStatsText.text = $"HP {enemy.maxHp} | ATK {enemy.atk} | DEF {enemy.def}";
+
+        if (enemyRewardText != null)
+            enemyRewardText.text = $"+{enemy.goldReward} oro | +{enemy.xpReward} XP";
+    }
+
+    private void ClearEnemyPreview()
+    {
+        if (enemyNameText != null)
+            enemyNameText.text = "Sin enemigo";
+
+        if (enemyStatsText != null)
+            enemyStatsText.text = "---";
+
+        if (enemyRewardText != null)
+            enemyRewardText.text = "---";
     }
 
     private void KillSelectedEnemy()
     {
-        if (enemyDropdown == null || currentEnemies.Count == 0)
+        if (enemyDropdown == null)
+        {
+            SetCombatStatus("No se encontró el selector de enemigos.");
+            return;
+        }
+
+        ZoneData selectedZone = GetSelectedZone();
+
+        if (selectedZone == null)
+        {
+            SetCombatStatus("Selecciona una zona para iniciar combate.");
+            return;
+        }
+
+        if (selectedZone.id != currentZoneId)
+        {
+            SetCombatStatus("Primero entra a esta zona para combatir.");
+            return;
+        }
+
+        if (currentEnemies.Count == 0)
         {
             SetCombatStatus("No hay enemigo seleccionado.");
             return;
@@ -350,7 +468,7 @@ public class GameUI : MonoBehaviour
 
         EnemyTypeData enemy = currentEnemies[index];
 
-        SetCombatStatus("Matando " + enemy.name + "...");
+        SetCombatStatus("Atacando a " + enemy.name + "...");
 
         KillEnemyRequest body = new KillEnemyRequest
         {
@@ -366,14 +484,14 @@ public class GameUI : MonoBehaviour
             {
                 if (!response.success)
                 {
-                    SetCombatStatus("Error: " + response.message);
+                    SetCombatStatus("El ataque falló: " + response.message);
                     return;
                 }
 
                 int goldEarned = response.data != null ? response.data.goldEarned : 0;
                 int xpEarned = response.data != null ? response.data.xpEarned : 0;
 
-                SetCombatStatus($"+{goldEarned} gold, +{xpEarned} XP");
+                SetCombatStatus($"Victoria: +{goldEarned} oro, +{xpEarned} XP");
 
                 if (response.data != null && response.data.character != null)
                 {
@@ -389,9 +507,66 @@ public class GameUI : MonoBehaviour
             },
             error =>
             {
-                SetCombatStatus("Error: " + error);
+                SetCombatStatus("Error de conexión: " + error);
             }
         ));
+    }
+
+    private ZoneData FindCurrentZone()
+    {
+        foreach (ZoneData zone in allZones)
+        {
+            if (zone.id == currentZoneId)
+                return zone;
+        }
+
+        if (currentCharacter != null && currentCharacter.currentZone != null)
+        {
+            foreach (ZoneData zone in allZones)
+            {
+                if (zone.id == currentCharacter.currentZone.id)
+                    return zone;
+            }
+        }
+
+        return null;
+    }
+
+    private ZoneData GetSelectedZone()
+    {
+        if (zoneDropdown == null || allZones.Count == 0)
+            return FindCurrentZone();
+
+        int index = zoneDropdown.value;
+
+        if (index < 0 || index >= allZones.Count)
+            return FindCurrentZone();
+
+        return allZones[index];
+    }
+
+    private int GetCurrentZoneIndex()
+    {
+        for (int i = 0; i < allZones.Count; i++)
+        {
+            if (allZones[i].id == currentZoneId)
+                return i;
+        }
+
+        return 0;
+    }
+
+    private bool IsZoneUnlocked(ZoneData zone)
+    {
+        return currentCharacter != null && zone != null && currentCharacter.level >= zone.requiredLevel;
+    }
+
+    private void SetChangeZoneButtonEnabled(bool enabled)
+    {
+        if (changeZoneButton == null)
+            return;
+
+        changeZoneButton.interactable = enabled;
     }
 
     private void CacheZoneFromCharacter(CharacterData character)
@@ -423,16 +598,16 @@ public class GameUI : MonoBehaviour
         if (character == null)
             return;
 
-        nameText.text = character.name;
-        classText.text = character.@class;
-        levelText.text = "Level: " + character.level;
-        xpText.text = "XP: " + character.xp;
-        goldText.text = "Gold: " + character.gold;
-        atkText.text = "ATK: " + character.atk;
-        defText.text = "DEF: " + character.def;
-        hpText.text = "HP: " + character.currentHp + "/" + character.maxHp;
-        critText.text = "CRIT: " + (character.critChance * 100f).ToString("0.0") + "%";
-        powerText.text = "Power: " + character.power;
+        SetTextIfPresent(nameText, string.IsNullOrEmpty(character.name) ? "Héroe sin nombre" : character.name);
+        SetTextIfPresent(classText, string.IsNullOrEmpty(character.@class) ? "Clase desconocida" : character.@class);
+        SetTextIfPresent(levelText, "Nivel: " + character.level);
+        SetTextIfPresent(xpText, "XP: " + character.xp);
+        SetTextIfPresent(goldText, "Oro: " + character.gold);
+        SetTextIfPresent(atkText, "ATK: " + character.atk);
+        SetTextIfPresent(defText, "DEF: " + character.def);
+        SetTextIfPresent(hpText, "HP: " + character.currentHp + "/" + character.maxHp);
+        SetTextIfPresent(critText, "CRIT: " + (character.critChance * 100f).ToString("0.0") + "%");
+        SetTextIfPresent(powerText, "Poder: " + character.power);
 
         string zoneName = "";
 
@@ -443,7 +618,16 @@ public class GameUI : MonoBehaviour
         else
             zoneName = character.currentZoneId;
 
-        zoneText.text = "Zone: " + zoneName;
+        if (string.IsNullOrEmpty(zoneName))
+            zoneName = "Sin zona";
+
+        SetTextIfPresent(zoneText, "Zona: " + zoneName);
+    }
+
+    private void SetTextIfPresent(TMP_Text target, string value)
+    {
+        if (target != null)
+            target.text = value;
     }
 
     private void Logout()

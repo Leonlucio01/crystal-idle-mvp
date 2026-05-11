@@ -4,6 +4,14 @@ using UnityEngine.UI;
 
 public class GameSceneLayout : MonoBehaviour
 {
+    private static readonly Color PanelColor = new Color(0.03f, 0.05f, 0.10f, 0.78f);
+    private static readonly Color Cyan = new Color(0.34f, 0.94f, 1f, 1f);
+    private static readonly Color Violet = new Color(0.66f, 0.48f, 1f, 1f);
+    private static readonly Color Gold = new Color(1f, 0.78f, 0.28f, 1f);
+    private static readonly Color SoftWhite = new Color(0.90f, 0.96f, 1f, 1f);
+    private static readonly Color MutedText = new Color(0.66f, 0.74f, 0.88f, 1f);
+    private static readonly Color ButtonText = new Color(0.04f, 0.06f, 0.11f, 1f);
+
     public RectTransform gamePanel;
 
     [Header("Character")]
@@ -24,6 +32,11 @@ public class GameSceneLayout : MonoBehaviour
     public RectTransform zoneDropdown;
     public RectTransform changeZoneButton;
     public RectTransform zoneStatusText;
+
+    [Header("Enemy Preview")]
+    public RectTransform enemyNameText;
+    public RectTransform enemyStatsText;
+    public RectTransform enemyRewardText;
 
     [Header("Combat")]
     public RectTransform enemyDropdown;
@@ -59,6 +72,10 @@ public class GameSceneLayout : MonoBehaviour
         changeZoneButton = FindRect(root, "ChangeZoneButton");
         zoneStatusText = FindRect(root, "ZoneStatusText");
 
+        enemyNameText = FindRect(root, "EnemyNameText");
+        enemyStatsText = FindRect(root, "EnemyStatsText");
+        enemyRewardText = FindRect(root, "EnemyRewardText");
+
         enemyDropdown = FindRect(root, "EnemyDropdown");
         killEnemyButton = FindRect(root, "KillEnemyButton");
         combatStatusText = FindRect(root, "CombatStatusText");
@@ -76,39 +93,50 @@ public class GameSceneLayout : MonoBehaviour
         AutoFindChildren();
         SetupPanel(gamePanel);
 
-        SetText(nameText, -285, 195, 330, 34, 28);
-        SetText(classText, -285, 160, 330, 28, 21);
-        SetText(levelText, -285, 118, 330, 26, 19);
-        SetText(xpText, -285, 91, 330, 26, 19);
-        SetText(goldText, -285, 64, 330, 26, 19);
-        SetText(atkText, -285, 37, 330, 26, 19);
-        SetText(defText, -285, 10, 330, 26, 19);
-        SetText(hpText, -285, -17, 330, 26, 19);
-        SetText(critText, -285, -44, 330, 26, 19);
-        SetText(powerText, -285, -71, 330, 26, 19);
-        SetText(zoneText, -285, -98, 330, 26, 19);
-        SetText(statusText, -285, -142, 330, 36, 18);
+        float leftX = -335f;
+        float rightX = 230f;
+        float leftWidth = 385f;
+        float rightWidth = 465f;
 
-        SetRect(zoneDropdown, 220, 160, 330, 38);
-        SetRect(changeZoneButton, 220, 110, 210, 42);
-        SetText(zoneStatusText, 220, 68, 330, 36, 16);
+        SetText(nameText, leftX, 226, leftWidth, 38, 30, Cyan, TextAlignmentOptions.Left, false);
+        SetText(classText, leftX, 190, leftWidth, 28, 20, Violet, TextAlignmentOptions.Left, false);
+        SetText(levelText, leftX, 142, leftWidth, 26, 18, SoftWhite);
+        SetText(xpText, leftX, 112, leftWidth, 26, 18, MutedText);
+        SetText(goldText, leftX, 82, leftWidth, 26, 18, Gold);
+        SetText(atkText, leftX, 38, leftWidth, 25, 18, SoftWhite);
+        SetText(defText, leftX, 10, leftWidth, 25, 18, SoftWhite);
+        SetText(hpText, leftX, -18, leftWidth, 25, 18, SoftWhite);
+        SetText(critText, leftX, -46, leftWidth, 25, 18, SoftWhite);
+        SetText(powerText, leftX, -86, leftWidth, 28, 20, Gold);
+        SetText(zoneText, leftX, -126, leftWidth, 30, 18, Cyan);
+        SetText(statusText, leftX, -181, leftWidth, 60, 16, MutedText);
 
-        SetRect(enemyDropdown, 220, 20, 330, 38);
-        SetRect(killEnemyButton, 220, -30, 210, 42);
-        SetText(combatStatusText, 220, -88, 330, 70, 18);
+        SetRect(zoneDropdown, rightX, 202, rightWidth, 42);
+        SetRect(changeZoneButton, rightX + 145, 152, 175, 42);
+        SetText(zoneStatusText, rightX, 103, rightWidth, 54, 16, MutedText);
 
-        SetRect(refreshButton, -285, -220, 165, 40);
-        SetRect(logoutButton, -105, -220, 165, 40);
+        SetText(enemyNameText, rightX, 42, rightWidth, 34, 24, Violet, TextAlignmentOptions.Left, false);
+        SetText(enemyStatsText, rightX, 8, rightWidth, 28, 17, SoftWhite);
+        SetText(enemyRewardText, rightX, -24, rightWidth, 28, 17, Gold);
 
-        SetButtonText(refreshButton, "Refresh", 19);
-        SetButtonText(logoutButton, "Logout", 19);
-        SetButtonText(killEnemyButton, "Matar enemigo", 18);
-        SetButtonText(changeZoneButton, "Entrar zona", 18);
+        SetRect(enemyDropdown, rightX, -78, rightWidth, 42);
+        SetRect(killEnemyButton, rightX + 145, -130, 175, 44);
+        SetText(combatStatusText, rightX, -193, rightWidth, 64, 17, MutedText);
 
-        StyleButton(refreshButton);
-        StyleButton(logoutButton);
-        StyleButton(killEnemyButton);
-        StyleButton(changeZoneButton);
+        SetRect(refreshButton, -90, -260, 160, 42);
+        SetRect(logoutButton, 90, -260, 160, 42);
+
+        SetButtonText(refreshButton, "Refresh", 18);
+        SetButtonText(logoutButton, "Logout", 18);
+        SetButtonText(killEnemyButton, "Atacar", 18);
+        SetButtonText(changeZoneButton, "Entrar zona", 17);
+
+        StyleButton(refreshButton, Cyan);
+        StyleButton(logoutButton, Violet);
+        StyleButton(killEnemyButton, Gold);
+        StyleButton(changeZoneButton, Cyan);
+        StyleDropdown(zoneDropdown);
+        StyleDropdown(enemyDropdown);
     }
 
     private void SetupPanel(RectTransform rect)
@@ -119,12 +147,12 @@ public class GameSceneLayout : MonoBehaviour
         rect.anchorMax = new Vector2(0.5f, 0.5f);
         rect.pivot = new Vector2(0.5f, 0.5f);
         rect.anchoredPosition = Vector2.zero;
-        rect.sizeDelta = new Vector2(820, 500);
+        rect.sizeDelta = new Vector2(1040, 600);
         rect.localScale = Vector3.one;
 
         Image image = rect.GetComponent<Image>();
         if (image != null)
-            image.color = new Color(0f, 0f, 0f, 0.25f);
+            image.color = PanelColor;
     }
 
     private void SetRect(RectTransform rect, float x, float y, float width, float height)
@@ -141,6 +169,21 @@ public class GameSceneLayout : MonoBehaviour
 
     private void SetText(RectTransform rect, float x, float y, float width, float height, int fontSize)
     {
+        SetText(rect, x, y, width, height, fontSize, SoftWhite);
+    }
+
+    private void SetText(
+        RectTransform rect,
+        float x,
+        float y,
+        float width,
+        float height,
+        int fontSize,
+        Color color,
+        TextAlignmentOptions alignment = TextAlignmentOptions.Left,
+        bool wrap = true
+    )
+    {
         SetRect(rect, x, y, width, height);
 
         TMP_Text text = rect != null ? rect.GetComponent<TMP_Text>() : null;
@@ -148,10 +191,10 @@ public class GameSceneLayout : MonoBehaviour
 
         text.fontSize = fontSize;
         text.enableAutoSizing = false;
-        text.alignment = TextAlignmentOptions.Left;
-        text.textWrappingMode = TextWrappingModes.Normal;
+        text.alignment = alignment;
+        text.textWrappingMode = wrap ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
         text.overflowMode = TextOverflowModes.Ellipsis;
-        text.color = Color.white;
+        text.color = color;
     }
 
     private void SetButtonText(RectTransform buttonRect, string value, int fontSize)
@@ -164,16 +207,55 @@ public class GameSceneLayout : MonoBehaviour
         childText.text = value;
         childText.fontSize = fontSize;
         childText.alignment = TextAlignmentOptions.Center;
-        childText.color = new Color(0.05f, 0.08f, 0.12f);
+        childText.enableAutoSizing = false;
+        childText.overflowMode = TextOverflowModes.Ellipsis;
+        childText.color = ButtonText;
     }
 
-    private void StyleButton(RectTransform buttonRect)
+    private void StyleButton(RectTransform buttonRect, Color baseColor)
     {
         if (buttonRect == null) return;
 
         Image image = buttonRect.GetComponent<Image>();
         if (image != null)
-            image.color = new Color(0.75f, 0.88f, 1f, 1f);
+            image.color = baseColor;
+
+        Button button = buttonRect.GetComponent<Button>();
+        if (button == null) return;
+
+        ColorBlock colors = button.colors;
+        colors.normalColor = baseColor;
+        colors.highlightedColor = Color.Lerp(baseColor, Color.white, 0.18f);
+        colors.pressedColor = Color.Lerp(baseColor, Color.black, 0.18f);
+        colors.selectedColor = colors.highlightedColor;
+        colors.disabledColor = new Color(baseColor.r, baseColor.g, baseColor.b, 0.38f);
+        button.colors = colors;
+    }
+
+    private void StyleDropdown(RectTransform dropdownRect)
+    {
+        if (dropdownRect == null) return;
+
+        Image image = dropdownRect.GetComponent<Image>();
+        if (image != null)
+            image.color = new Color(0.07f, 0.10f, 0.20f, 0.95f);
+
+        TMP_Dropdown dropdown = dropdownRect.GetComponent<TMP_Dropdown>();
+        if (dropdown == null) return;
+
+        if (dropdown.captionText != null)
+        {
+            dropdown.captionText.fontSize = 16;
+            dropdown.captionText.color = SoftWhite;
+            dropdown.captionText.overflowMode = TextOverflowModes.Ellipsis;
+        }
+
+        if (dropdown.itemText != null)
+        {
+            dropdown.itemText.fontSize = 15;
+            dropdown.itemText.color = SoftWhite;
+            dropdown.itemText.overflowMode = TextOverflowModes.Ellipsis;
+        }
     }
 
     private RectTransform FindRect(Transform root, string objectName)
