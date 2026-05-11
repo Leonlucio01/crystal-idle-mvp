@@ -22,3 +22,15 @@ Por eso era confuso mostrar daño parcial. Ahora el cliente muestra `KILL`.
 - Recompensas flotantes
 - Upgrades con costos
 - Ranking
+
+
+## Stable Polish
+
+Esta versión mantiene intacta la lógica de `app.js` y solo mejora la presentación visual en `styles.css` más un pequeño texto del header en `index.html`.
+
+Archivos tocados:
+- `index.html`
+- `styles.css`
+
+Archivo NO tocado:
+- `app.js`
