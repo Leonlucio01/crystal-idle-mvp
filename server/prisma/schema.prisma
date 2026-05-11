@@ -7,7 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
 enum CharacterClass {
   WARRIOR
   MAGE
@@ -23,13 +22,39 @@ enum UpgradeStat {
   CRIT
 }
 
+enum ItemType {
+  WEAPON
+  ARMOR
+  HELMET
+  BOOTS
+  AMULET
+  MATERIAL
+  CHEST
+}
+
+enum ItemRarity {
+  COMMON
+  RARE
+  EPIC
+  LEGENDARY
+  MYTHIC
+}
+
+enum EquipmentSlot {
+  WEAPON
+  ARMOR
+  HELMET
+  BOOTS
+  AMULET
+}
+
 model User {
-  id           String      @id @default(cuid())
-  email        String      @unique
+  id           String     @id @default(cuid())
+  email        String     @unique
   passwordHash String
   character    Character?
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 }
 
 model Character {
@@ -55,14 +80,21 @@ model Character {
   attackSpeed   Float           @default(1.0)
   power         Int             @default(100)
 
+  totalKills    Int             @default(0)
+  bossKills     Int             @default(0)
+  maxZoneOrderUnlocked Int       @default(1)
+
   currentZoneId String?
   currentZone   Zone?           @relation(fields: [currentZoneId], references: [id])
 
   lastLogoutAt  DateTime?
+  lastActiveAt  DateTime?
 
   upgrades      StatUpgrade[]
   combatLogs    CombatLog[]
   offlineRewards OfflineReward[]
+  inventory     CharacterInventoryItem[]
+  zoneProgress  CharacterZoneProgress[]
 
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @updatedAt
@@ -72,13 +104,22 @@ model Zone {
   id              String       @id
   name            String
   description     String
+  orderIndex      Int          @default(1)
   requiredLevel   Int          @default(1)
+  requiredPower   Int          @default(0)
+  xpMultiplier    Float        @default(1.0)
+  goldMultiplier  Float        @default(1.0)
+  isActive        Boolean      @default(true)
 
   characters      Character[]
   enemies         EnemyType[]
+  itemDefinitions ItemDefinition[]
+  progress        CharacterZoneProgress[]
 
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
+
+  @@unique([orderIndex])
 }
 
 model EnemyType {
@@ -87,17 +128,112 @@ model EnemyType {
   zone        Zone        @relation(fields: [zoneId], references: [id], onDelete: Cascade)
 
   name        String
+  level       Int         @default(1)
+  sortOrder   Int         @default(1)
   maxHp       Int
   atk         Int
   def         Int
   xpReward    Int
   goldReward  Int
   isBoss      Boolean     @default(false)
+  powerRecommended Int    @default(0)
 
   combatLogs  CombatLog[]
+  drops       EnemyDrop[]
 
   createdAt   DateTime    @default(now())
   updatedAt   DateTime    @updatedAt
+
+  @@index([zoneId, isBoss])
+}
+
+model ItemDefinition {
+  id            String          @id
+  name          String
+  description   String          @default("")
+  type          ItemType
+  rarity        ItemRarity      @default(COMMON)
+  slot          EquipmentSlot?
+  stackable     Boolean         @default(false)
+
+  atk           Int             @default(0)
+  def           Int             @default(0)
+  maxHp         Int             @default(0)
+  critChance    Float           @default(0)
+  goldBonus     Float           @default(0)
+  xpBonus       Float           @default(0)
+  autoFarmSpeed Float           @default(0)
+
+  sellGold      Int             @default(0)
+  sourceZoneId  String?
+  sourceZone    Zone?           @relation(fields: [sourceZoneId], references: [id], onDelete: SetNull)
+
+  drops         EnemyDrop[]
+  inventory     CharacterInventoryItem[]
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model EnemyDrop {
+  id               String         @id @default(cuid())
+  enemyTypeId      String
+  enemyType        EnemyType      @relation(fields: [enemyTypeId], references: [id], onDelete: Cascade)
+  itemDefinitionId String
+  itemDefinition   ItemDefinition @relation(fields: [itemDefinitionId], references: [id], onDelete: Cascade)
+
+  dropChance       Float
+  minQuantity      Int            @default(1)
+  maxQuantity      Int            @default(1)
+
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@unique([enemyTypeId, itemDefinitionId])
+}
+
+model CharacterInventoryItem {
+  id               String         @id @default(cuid())
+  characterId      String
+  character        Character      @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  itemDefinitionId String
+  itemDefinition   ItemDefinition @relation(fields: [itemDefinitionId], references: [id], onDelete: Cascade)
+
+  quantity         Int            @default(1)
+  equippedSlot     EquipmentSlot?
+
+  atk              Int            @default(0)
+  def              Int            @default(0)
+  maxHp            Int            @default(0)
+  critChance       Float          @default(0)
+  goldBonus        Float          @default(0)
+  xpBonus          Float          @default(0)
+  autoFarmSpeed    Float          @default(0)
+
+  acquiredAt       DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  @@index([characterId])
+  @@index([itemDefinitionId])
+}
+
+model CharacterZoneProgress {
+  id                 String     @id @default(cuid())
+  characterId         String
+  character           Character  @relation(fields: [characterId], references: [id], onDelete: Cascade)
+  zoneId              String
+  zone                Zone       @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  unlocked            Boolean    @default(false)
+  enemiesKilled       Int        @default(0)
+  bossDefeated        Boolean    @default(false)
+  bossKills           Int        @default(0)
+  lastBossDefeatedAt  DateTime?
+
+  createdAt           DateTime   @default(now())
+  updatedAt           DateTime   @updatedAt
+
+  @@unique([characterId, zoneId])
 }
 
 model StatUpgrade {
@@ -130,6 +266,7 @@ model CombatLog {
   enemyKilled   Boolean     @default(false)
   goldEarned    Int         @default(0)
   xpEarned      Int         @default(0)
+  dropsJson     Json?
 
   createdAt     DateTime    @default(now())
 }
@@ -144,6 +281,7 @@ model OfflineReward {
   kills           Int
   goldEarned      Int
   xpEarned        Int
+  dropsJson       Json?
 
   claimedAt       DateTime   @default(now())
 }

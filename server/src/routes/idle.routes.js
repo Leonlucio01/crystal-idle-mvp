@@ -1,98 +1,39 @@
 const express = require("express");
 const prisma = require("../utils/prisma");
 const authMiddleware = require("../middleware/auth.middleware");
+const { buildCharacterUpdateAfterRewards, getEffectiveStats } = require("../game/progression");
+const { rollDrops, grantDrops, summarizeDrops } = require("../game/drops");
 
 const router = express.Router();
-
 const MAX_OFFLINE_SECONDS = 8 * 60 * 60;
-
-function getXpRequired(level) {
-  return Math.floor(100 * Math.pow(level, 1.5));
-}
-
-function calculatePower(character) {
-  return Math.floor(
-    character.atk * 5 +
-    character.def * 4 +
-    character.maxHp +
-    character.critChance * 1000
-  );
-}
-
-function rollOfflineDrops(enemy, kills) {
-  if (!enemy || kills <= 0) return [];
-
-  const drops = [];
-  const commonQty = Math.floor(kills / 35);
-  const rareQty = Math.floor(kills / 180);
-  const epicQty = Math.floor(kills / 900);
-
-  if (commonQty > 0) {
-    drops.push({ name: "Crystal Fragment", rarity: "common", quantity: Math.min(commonQty, 99) });
-  }
-
-  if (rareQty > 0) {
-    drops.push({ name: `${enemy.name} Rare Cache`, rarity: "rare", quantity: Math.min(rareQty, 20) });
-  }
-
-  if (epicQty > 0) {
-    drops.push({ name: "Epic Offline Chest", rarity: "epic", quantity: Math.min(epicQty, 5) });
-  }
-
-  return drops;
-}
-
-function applyXp(character, xpEarned) {
-  let newLevel = character.level;
-  let newXp = character.xp + xpEarned;
-
-  let xpRequired = getXpRequired(newLevel);
-
-  while (newXp >= xpRequired) {
-    newXp -= xpRequired;
-    newLevel += 1;
-    xpRequired = getXpRequired(newLevel);
-  }
-
-  const levelsGained = newLevel - character.level;
-
-  return {
-    level: newLevel,
-    xp: newXp,
-    levelsGained,
-  };
-}
+const MAX_OFFLINE_DROP_SIM_KILLS = 200;
 
 router.post("/claim-offline", authMiddleware, async (req, res) => {
   try {
     const character = await prisma.character.findUnique({
-      where: {
-        userId: req.user.id,
-      },
+      where: { userId: req.user.id },
       include: {
         currentZone: {
           include: {
-            enemies: true,
+            enemies: {
+              where: { isBoss: false },
+              orderBy: { sortOrder: "asc" },
+              include: { drops: { include: { itemDefinition: true } } },
+            },
           },
         },
+        inventory: { include: { itemDefinition: true } },
       },
     });
 
     if (!character) {
-      return res.status(404).json({
-        success: false,
-        message: "Character not found",
-      });
+      return res.status(404).json({ success: false, message: "Character not found" });
     }
 
     if (!character.lastLogoutAt) {
       const updatedCharacter = await prisma.character.update({
-        where: {
-          id: character.id,
-        },
-        data: {
-          lastLogoutAt: new Date(),
-        },
+        where: { id: character.id },
+        data: { lastLogoutAt: new Date(), lastActiveAt: new Date() },
       });
 
       return res.json({
@@ -103,6 +44,7 @@ router.post("/claim-offline", authMiddleware, async (req, res) => {
           kills: 0,
           goldEarned: 0,
           xpEarned: 0,
+          drops: [],
           levelsGained: 0,
           character: updatedCharacter,
         },
@@ -110,71 +52,51 @@ router.post("/claim-offline", authMiddleware, async (req, res) => {
     }
 
     const now = new Date();
-    const offlineSecondsRaw = Math.floor(
-      (now.getTime() - character.lastLogoutAt.getTime()) / 1000
-    );
+    const offlineSecondsRaw = Math.floor((now.getTime() - character.lastLogoutAt.getTime()) / 1000);
+    const secondsOffline = Math.max(0, Math.min(offlineSecondsRaw, MAX_OFFLINE_SECONDS));
 
-    const secondsOffline = Math.max(
-      0,
-      Math.min(offlineSecondsRaw, MAX_OFFLINE_SECONDS)
-    );
-
-    const normalEnemies = character.currentZone.enemies.filter(
-      (enemy) => !enemy.isBoss
-    );
-
-    if (normalEnemies.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "No farmable enemies in current zone",
-      });
+    const enemy = character.currentZone?.enemies?.[0];
+    if (!enemy) {
+      return res.status(400).json({ success: false, message: "No farmable enemies in current zone" });
     }
 
-    const enemy = normalEnemies[0];
-
-    const playerDps = Math.max(1, character.atk * character.attackSpeed);
+    const effective = getEffectiveStats(character);
+    const playerDps = Math.max(1, effective.atk * effective.attackSpeed);
     const secondsPerKill = Math.max(1, enemy.maxHp / playerDps);
     const kills = Math.floor(secondsOffline / secondsPerKill);
 
-    const goldEarned = kills * enemy.goldReward;
-    const xpEarned = kills * enemy.xpReward;
-    const drops = rollOfflineDrops(enemy, kills);
-
-    const xpResult = applyXp(character, xpEarned);
-
-    const hpBonusFromLevel = xpResult.levelsGained * 10;
-    const atkBonusFromLevel = xpResult.levelsGained * 2;
-    const defBonusFromLevel = xpResult.levelsGained * 1;
-
-    const updatedStatsPreview = {
-      ...character,
-      level: xpResult.level,
-      xp: xpResult.xp,
-      gold: character.gold + goldEarned,
-      maxHp: character.maxHp + hpBonusFromLevel,
-      currentHp: character.currentHp + hpBonusFromLevel,
-      atk: character.atk + atkBonusFromLevel,
-      def: character.def + defBonusFromLevel,
-    };
-
-    const newPower = calculatePower(updatedStatsPreview);
+    const goldEarned = Math.floor(kills * enemy.goldReward * (1 + (effective.goldBonus || 0)));
+    const xpEarned = Math.floor(kills * enemy.xpReward * (1 + (effective.xpBonus || 0)));
+    const simulatedKillsForDrops = Math.min(kills, MAX_OFFLINE_DROP_SIM_KILLS);
+    const dropsToGrant = rollDrops(enemy, simulatedKillsForDrops);
+    const { xpResult, data: characterUpdateData } = buildCharacterUpdateAfterRewards(character, xpEarned, goldEarned, {
+      lastLogoutAt: now,
+      lastActiveAt: now,
+      totalKills: character.totalKills + kills,
+    });
 
     const result = await prisma.$transaction(async (tx) => {
+      const grantedDrops = await grantDrops(tx, character.id, dropsToGrant);
+
       const updatedCharacter = await tx.character.update({
+        where: { id: character.id },
+        data: characterUpdateData,
+        include: {
+          upgrades: true,
+          currentZone: { include: { enemies: { orderBy: { sortOrder: "asc" } } } },
+          inventory: { include: { itemDefinition: true } },
+        },
+      });
+
+      await tx.characterZoneProgress.upsert({
         where: {
-          id: character.id,
+          characterId_zoneId: {
+            characterId: character.id,
+            zoneId: enemy.zoneId,
+          },
         },
-        data: {
-          level: xpResult.level,
-          xp: xpResult.xp,
-          gold: character.gold + goldEarned,
-          maxHp: character.maxHp + hpBonusFromLevel,
-          currentHp: character.currentHp + hpBonusFromLevel,
-          atk: character.atk + atkBonusFromLevel,
-          def: character.def + defBonusFromLevel,
-          power: newPower,
-          lastLogoutAt: now,
-        },
+        update: { unlocked: true, enemiesKilled: { increment: kills } },
+        create: { characterId: character.id, zoneId: enemy.zoneId, unlocked: true, enemiesKilled: kills },
       });
 
       const offlineReward = await tx.offlineReward.create({
@@ -184,40 +106,31 @@ router.post("/claim-offline", authMiddleware, async (req, res) => {
           kills,
           goldEarned,
           xpEarned,
+          dropsJson: grantedDrops,
         },
       });
 
-      return {
-        character: updatedCharacter,
-        offlineReward,
-      };
+      return { updatedCharacter, offlineReward, grantedDrops };
     });
 
     res.json({
       success: true,
       message: "Offline rewards claimed",
       data: {
-        enemy: {
-          id: enemy.id,
-          name: enemy.name,
-        },
+        enemy: { id: enemy.id, name: enemy.name },
         secondsOffline,
         kills,
         goldEarned,
         xpEarned,
-        drops,
+        drops: summarizeDrops(result.grantedDrops),
         levelsGained: xpResult.levelsGained,
-        character: result.character,
+        character: result.updatedCharacter,
         offlineReward: result.offlineReward,
       },
     });
   } catch (error) {
     console.error("Claim offline error:", error);
-
-    res.status(500).json({
-      success: false,
-      message: "Error claiming offline rewards",
-    });
+    res.status(500).json({ success: false, message: "Error claiming offline rewards" });
   }
 });
 
