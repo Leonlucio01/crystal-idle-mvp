@@ -193,4 +193,134 @@ router.post("/attack", authMiddleware, async (req, res) => {
   }
 });
 
+router.post("/kill", authMiddleware, async (req, res) => {
+  try {
+    const { enemyTypeId } = req.body;
+
+    if (!enemyTypeId) {
+      return res.status(400).json({
+        success: false,
+        message: "enemyTypeId is required",
+      });
+    }
+
+    const character = await prisma.character.findUnique({
+      where: {
+        userId: req.user.id,
+      },
+      include: {
+        currentZone: true,
+      },
+    });
+
+    if (!character) {
+      return res.status(404).json({
+        success: false,
+        message: "Character not found",
+      });
+    }
+
+    const enemy = await prisma.enemyType.findUnique({
+      where: {
+        id: enemyTypeId,
+      },
+    });
+
+    if (!enemy) {
+      return res.status(404).json({
+        success: false,
+        message: "Enemy not found",
+      });
+    }
+
+    if (enemy.zoneId !== character.currentZoneId) {
+      return res.status(400).json({
+        success: false,
+        message: "Enemy is not in your current zone",
+      });
+    }
+
+    const goldEarned = enemy.goldReward;
+    const xpEarned = enemy.xpReward;
+
+    const xpResult = applyXp(character, xpEarned);
+
+    const hpBonusFromLevel = xpResult.levelsGained * 10;
+    const atkBonusFromLevel = xpResult.levelsGained * 2;
+    const defBonusFromLevel = xpResult.levelsGained * 1;
+
+    const updatedStatsPreview = {
+      ...character,
+      level: xpResult.level,
+      xp: xpResult.xp,
+      gold: character.gold + goldEarned,
+      maxHp: character.maxHp + hpBonusFromLevel,
+      currentHp: character.currentHp + hpBonusFromLevel,
+      atk: character.atk + atkBonusFromLevel,
+      def: character.def + defBonusFromLevel,
+    };
+
+    const newPower = calculatePower(updatedStatsPreview);
+
+    const result = await prisma.$transaction(async (tx) => {
+      const updatedCharacter = await tx.character.update({
+        where: {
+          id: character.id,
+        },
+        data: {
+          level: xpResult.level,
+          xp: xpResult.xp,
+          gold: character.gold + goldEarned,
+          maxHp: character.maxHp + hpBonusFromLevel,
+          currentHp: character.currentHp + hpBonusFromLevel,
+          atk: character.atk + atkBonusFromLevel,
+          def: character.def + defBonusFromLevel,
+          power: newPower,
+        },
+      });
+
+      const combatLog = await tx.combatLog.create({
+        data: {
+          characterId: character.id,
+          enemyTypeId: enemy.id,
+          damage: enemy.maxHp,
+          isCrit: false,
+          enemyKilled: true,
+          goldEarned,
+          xpEarned,
+        },
+      });
+
+      return {
+        character: updatedCharacter,
+        combatLog,
+      };
+    });
+
+    res.json({
+      success: true,
+      message: `${enemy.name} killed successfully`,
+      data: {
+        enemy: {
+          id: enemy.id,
+          name: enemy.name,
+          maxHp: enemy.maxHp,
+          isBoss: enemy.isBoss,
+        },
+        goldEarned,
+        xpEarned,
+        levelsGained: xpResult.levelsGained,
+        character: result.character,
+      },
+    });
+  } catch (error) {
+    console.error("Combat kill error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Error killing enemy",
+    });
+  }
+});
+
 module.exports = router;
