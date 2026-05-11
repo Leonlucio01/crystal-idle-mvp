@@ -200,11 +200,39 @@
                   <h2>Drops recientes</h2>
                 </div>
               </div>
-              <span class="pill">MVP visual</span>
+              <span class="pill">Últimos 10</span>
             </div>
             <div id="dropFeed" class="drop-feed">
               <p class="status">Aun no hay drops. Farmea enemigos o desafia jefes.</p>
             </div>
+          </article>
+
+          <article class="panel inventory-panel">
+            <div class="panel-title rowed">
+              <div class="panel-title compact">
+                <span class="icon-dot inventory-dot"></span>
+                <div>
+                  <p class="eyebrow">Equipo e inventario</p>
+                  <h2>Inventario</h2>
+                </div>
+              </div>
+              <span id="inventoryCount" class="pill">0 items</span>
+            </div>
+
+            <div class="equipment-grid" id="equipmentGrid"></div>
+
+            <div class="inventory-toolbar" aria-label="Filtros de inventario">
+              <button class="small ghost inventoryFilter active" data-filter="ALL">Todo</button>
+              <button class="small ghost inventoryFilter" data-filter="WEAPON">Armas</button>
+              <button class="small ghost inventoryFilter" data-filter="ARMOR">Armadura</button>
+              <button class="small ghost inventoryFilter" data-filter="MATERIAL">Materiales</button>
+              <button class="small ghost inventoryFilter" data-filter="CHEST">Cofres</button>
+            </div>
+
+            <div id="inventoryList" class="inventory-list">
+              <p class="status">Inicia sesión para ver tu inventario.</p>
+            </div>
+            <p id="inventoryStatus" class="status">Los drops reales aparecerán aquí cuando el backend los guarde.</p>
           </article>
 
           <article class="panel leaderboard-panel">

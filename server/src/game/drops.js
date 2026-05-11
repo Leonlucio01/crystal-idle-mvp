@@ -11,6 +11,7 @@ function serializeDrop(inventoryItem) {
     type: item.type,
     rarity: item.rarity,
     slot: item.slot || null,
+    equippedSlot: inventoryItem.equippedSlot || null,
     quantity: inventoryItem.quantity || 1,
     atk: inventoryItem.atk || item.atk || 0,
     def: inventoryItem.def || item.def || 0,

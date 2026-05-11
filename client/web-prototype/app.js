@@ -1,9 +1,14 @@
-const API_URL = "https://crystal-idle-api.onrender.com";
+const DEFAULT_RENDER_API_URL = "https://crystal-idle-api.onrender.com";
+const DEFAULT_LOCAL_API_URL = "http://localhost:3000";
+const API_URL = localStorage.getItem("crystal_idle_api_url") || (location.protocol === "file:" ? DEFAULT_LOCAL_API_URL : DEFAULT_RENDER_API_URL);
 
 let token = localStorage.getItem("crystal_idle_token") || "";
 let character = null;
 let selectedEnemy = null;
 let zones = [];
+let inventoryItems = [];
+let equippedItems = [];
+let selectedInventoryFilter = "ALL";
 let recentDrops = [];
 
 let enemyCurrentHp = 0;
@@ -58,7 +63,9 @@ function getNormalEnemies(enemies = getCurrentEnemies()) {
   return enemies.filter((enemy) => !enemy.isBoss);
 }
 
-function getRecommendedPower(enemy) {
+function getRecommendedPower(enemy, zone = null) {
+  if (enemy?.powerRecommended) return Number(enemy.powerRecommended);
+  if (zone?.requiredPower) return Number(zone.requiredPower);
   if (!enemy) return 0;
   return Math.max(100, Math.floor(enemy.maxHp * 0.45 + enemy.atk * 12 + enemy.def * 18));
 }
@@ -66,7 +73,7 @@ function getRecommendedPower(enemy) {
 function getNextZone() {
   const currentZone = getCurrentZone();
   if (!currentZone || !zones.length) return null;
-  const sorted = [...zones].sort((a, b) => a.requiredLevel - b.requiredLevel);
+  const sorted = [...zones].sort((a, b) => (a.orderIndex || a.requiredLevel) - (b.orderIndex || b.requiredLevel));
   const index = sorted.findIndex((zone) => zone.id === currentZone.id);
   return index >= 0 ? sorted[index + 1] : null;
 }
@@ -75,9 +82,21 @@ function normalizeDrop(drop) {
   if (!drop) return null;
   return {
     name: drop.name || "Drop desconocido",
+    id: drop.id || null,
+    itemDefinitionId: drop.itemDefinitionId || null,
+    name: drop.name || "Drop desconocido",
+    type: drop.type || null,
     rarity: (drop.rarity || "common").toLowerCase(),
+    slot: drop.slot || null,
     source: drop.source || "Combate",
     quantity: drop.quantity || 1,
+    atk: drop.atk || 0,
+    def: drop.def || 0,
+    maxHp: drop.maxHp || 0,
+    critChance: drop.critChance || 0,
+    goldBonus: drop.goldBonus || 0,
+    xpBonus: drop.xpBonus || 0,
+    autoFarmSpeed: drop.autoFarmSpeed || 0,
   };
 }
 
@@ -88,6 +107,40 @@ function addDrop(drop) {
   recentDrops = recentDrops.slice(0, 10);
   renderDropFeed();
   addLog(`Drop encontrado: ${normalized.name} (${normalized.rarity}).`, "success");
+}
+
+function addDrops(drops = [], source = "Combate") {
+  drops.forEach((drop) => addDrop({ ...drop, source: drop.source || source }));
+}
+
+function statLine(item) {
+  const parts = [];
+  if (item.atk) parts.push(`ATK +${formatNumber(item.atk)}`);
+  if (item.def) parts.push(`DEF +${formatNumber(item.def)}`);
+  if (item.maxHp) parts.push(`HP +${formatNumber(item.maxHp)}`);
+  if (item.critChance) parts.push(`CRIT +${Math.round(item.critChance * 1000) / 10}%`);
+  if (item.goldBonus) parts.push(`Oro +${Math.round(item.goldBonus * 100)}%`);
+  if (item.xpBonus) parts.push(`XP +${Math.round(item.xpBonus * 100)}%`);
+  if (item.autoFarmSpeed) parts.push(`Auto +${Math.round(item.autoFarmSpeed * 100)}%`);
+  return parts.join(" · ") || "Material / coleccionable";
+}
+
+function itemTypeLabel(item) {
+  const map = {
+    WEAPON: "Arma",
+    ARMOR: "Armadura",
+    HELMET: "Casco",
+    BOOTS: "Botas",
+    AMULET: "Amuleto",
+    MATERIAL: "Material",
+    CHEST: "Cofre",
+  };
+  return map[item.type] || item.type || "Item";
+}
+
+function slotLabel(slot) {
+  const map = { WEAPON: "Arma", ARMOR: "Armadura", HELMET: "Casco", BOOTS: "Botas", AMULET: "Amuleto" };
+  return map[slot] || slot || "Slot";
 }
 
 function renderDropFeed() {
@@ -110,6 +163,100 @@ function renderDropFeed() {
       </div>
     `)
     .join("");
+}
+
+function renderEquipment() {
+  const container = $("equipmentGrid");
+  if (!container) return;
+
+  const slots = ["WEAPON", "ARMOR", "HELMET", "BOOTS", "AMULET"];
+  const bySlot = Object.fromEntries(equippedItems.map((item) => [item.equippedSlot || item.slot, item]));
+
+  container.innerHTML = slots.map((slot) => {
+    const item = bySlot[slot];
+    return `
+      <div class="equipment-slot ${item ? String(item.rarity || "common").toLowerCase() : "empty"}">
+        <span>${slotLabel(slot)}</span>
+        <strong>${item ? item.name : "Vacío"}</strong>
+        <small>${item ? statLine(item) : "Sin bonus"}</small>
+      </div>
+    `;
+  }).join("");
+}
+
+function renderInventory() {
+  renderEquipment();
+  const container = $("inventoryList");
+  if (!container) return;
+
+  const filterButtons = document.querySelectorAll(".inventoryFilter");
+  filterButtons.forEach((button) => button.classList.toggle("active", button.dataset.filter === selectedInventoryFilter));
+
+  let items = [...inventoryItems];
+  if (selectedInventoryFilter !== "ALL") {
+    items = items.filter((item) => item.type === selectedInventoryFilter || item.slot === selectedInventoryFilter);
+  }
+
+  status("inventoryCount", `${formatNumber(inventoryItems.length)} items`);
+
+  if (!character) {
+    container.innerHTML = `<p class="status">Inicia sesión para ver tu inventario.</p>`;
+    return;
+  }
+
+  if (!items.length) {
+    container.innerHTML = `<p class="status">Inventario vacío. Usa Auto Farm, derrota enemigos o desafía jefes para conseguir drops.</p>`;
+    return;
+  }
+
+  container.innerHTML = items.map((item) => {
+    const rarity = String(item.rarity || "common").toLowerCase();
+    const canEquip = Boolean(item.slot);
+    const equipped = Boolean(item.equippedSlot);
+    const qty = item.quantity > 1 ? `${item.quantity}x ` : "";
+    return `
+      <div class="inventory-item ${rarity}">
+        <div class="inventory-item-main">
+          <div class="inventory-title-row">
+            <strong>${qty}${item.name}</strong>
+            <span class="drop-rarity">${rarity}</span>
+          </div>
+          <p>${itemTypeLabel(item)}${equipped ? ` · Equipado en ${slotLabel(item.equippedSlot)}` : ""}</p>
+          <small>${statLine(item)}</small>
+        </div>
+        <div class="inventory-actions">
+          <button class="small primary inventory-equip" data-item-id="${item.id}" ${!canEquip || equipped ? "disabled" : ""}>${equipped ? "Equipado" : "Equipar"}</button>
+          <button class="small ghost inventory-sell" data-item-id="${item.id}" ${equipped ? "disabled" : ""}>Vender</button>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  container.querySelectorAll(".inventory-equip").forEach((button) => {
+    button.onclick = () => equipItem(button.dataset.itemId);
+  });
+  container.querySelectorAll(".inventory-sell").forEach((button) => {
+    button.onclick = () => sellItem(button.dataset.itemId);
+  });
+}
+
+async function loadInventory() {
+  if (!token) {
+    inventoryItems = [];
+    equippedItems = [];
+    renderInventory();
+    return;
+  }
+
+  try {
+    const data = await api("/inventory");
+    inventoryItems = data.data?.items || [];
+    equippedItems = data.data?.equipped || [];
+    renderInventory();
+  } catch (e) {
+    status("inventoryStatus", `Error: ${e.message}`);
+    addLog(`Error cargando inventario: ${e.message}`, "error");
+  }
 }
 
 function status(id, msg) {
@@ -151,7 +298,7 @@ async function loadZones() {
     const data = await api("/zones");
     zones = data.data || [];
     renderZones();
-    addLog("Zonas cargadas desde Render.");
+    addLog("Zonas cargadas desde la API.");
   } catch (e) {
     console.error("Error loading zones:", e);
     status("combatStatus", `Error cargando zonas: ${e.message}`);
@@ -198,7 +345,7 @@ function renderZones() {
 
   zones.forEach((zone) => {
     const isCurrent = zone.id === currentZoneId;
-    const isUnlocked = character && characterLevel >= zone.requiredLevel;
+    const isUnlocked = character ? Boolean(zone.unlocked || (!zone.locked && characterLevel >= zone.requiredLevel)) : zone.requiredLevel <= 1;
 
     const card = document.createElement("div");
     card.className = "zone-card" + (isCurrent ? " current" : "") + (!isUnlocked ? " locked" : "");
@@ -217,9 +364,9 @@ function renderZones() {
       <h3>${zone.name}</h3>
       <p>${zone.description || "Zona de combate y farmeo."}</p>
       <p><strong>Enemigos:</strong> ${enemyNames || "Sin enemigos"}</p>
-      <p><strong>Poder recomendado:</strong> ${formatNumber(getRecommendedPower((zone.enemies || []).find((enemy) => enemy.isBoss) || (zone.enemies || [])[0]))}</p>
+      <p><strong>Poder recomendado:</strong> ${formatNumber(getRecommendedPower((zone.enemies || []).find((enemy) => enemy.isBoss) || (zone.enemies || [])[0], zone))}</p>
       <button data-zone-id="${zone.id}" ${!isUnlocked || isCurrent ? "disabled" : ""}>
-        ${isCurrent ? "Zona actual" : isUnlocked ? "Entrar" : `Requiere nivel ${zone.requiredLevel}`}
+        ${isCurrent ? "Zona actual" : isUnlocked ? "Entrar" : `Bloqueada · Nivel ${zone.requiredLevel} / Poder ${formatNumber(zone.requiredPower || 0)}`}
       </button>
     `;
 
@@ -334,7 +481,7 @@ function renderBossPanel() {
     return;
   }
 
-  const recommendedPower = getRecommendedPower(boss);
+  const recommendedPower = getRecommendedPower(boss, getCurrentZone());
   const nextZone = getNextZone();
   const power = Number(character.power || 0);
   const ready = power >= recommendedPower;
@@ -434,6 +581,7 @@ async function register() {
     status("authStatus", "Registro correcto.");
     addLog("Registro correcto. Personaje creado.", "success");
     await loadCharacter();
+    await loadInventory();
     loadLeaderboard();
   } catch (e) {
     status("authStatus", `Error: ${e.message}`);
@@ -456,6 +604,7 @@ async function login() {
     status("authStatus", "Sesión iniciada.");
     addLog("Sesión iniciada correctamente.", "success");
     await loadCharacter();
+    await loadInventory();
     loadLeaderboard();
   } catch (e) {
     status("authStatus", `Error: ${e.message}`);
@@ -490,6 +639,7 @@ async function changeZone(zoneId) {
     status("zoneStatus", data.message);
     addLog(data.message || "Zona cambiada.", "success");
     renderCharacter(data.data);
+    await loadInventory();
     loadLeaderboard();
   } catch (e) {
     status("zoneStatus", `Error: ${e.message}`);
@@ -503,7 +653,7 @@ async function killEnemy() {
   try {
     status("combatStatus", `Peleando contra ${selectedEnemy.name}...`);
 
-    const data = await api("/combat/kill", {
+    const data = await api("/combat/attack", {
       method: "POST",
       body: JSON.stringify({ enemyTypeId: selectedEnemy.id }),
     });
@@ -512,12 +662,13 @@ async function killEnemy() {
     simulateKillVisual();
     showRewardPopup(r.goldEarned, r.xpEarned);
 
-    if (r.drop) addDrop({ ...r.drop, source: selectedEnemy.name });
+    addDrops(r.drops || (r.drop ? [r.drop] : []), selectedEnemy.name);
 
-    const dropText = r.drop ? ` Drop: ${r.drop.name}.` : "";
+    const dropText = r.drops?.length ? ` Drops: ${r.drops.map((drop) => `${drop.quantity || 1}x ${drop.name}`).join(", ")}.` : r.drop ? ` Drop: ${r.drop.name}.` : "";
     status("combatStatus", `${data.message}. +${formatNumber(r.goldEarned)} gold, +${formatNumber(r.xpEarned)} XP.${dropText}`);
     addLog(`Derrotaste a ${selectedEnemy.name}: +${formatNumber(r.goldEarned)} oro, +${formatNumber(r.xpEarned)} XP.${dropText}`, "combat");
     await loadCharacter();
+    await loadInventory();
     loadLeaderboard();
   } catch (e) {
     status("combatStatus", `Error: ${e.message}`);
@@ -545,14 +696,17 @@ async function challengeBoss() {
     showKillPopup();
     showRewardPopup(r.goldEarned, r.xpEarned);
 
-    if (r.drop) addDrop({ ...r.drop, source: boss.name });
+    addDrops(r.drops || (r.drop ? [r.drop] : []), boss.name);
 
-    const unlockText = r.nextZone ? ` Proxima meta: ${r.nextZone.name}.` : " Has conquistado la ultima zona disponible.";
-    const dropText = r.drop ? ` Drop: ${r.drop.name}.` : "";
+    const unlockedZone = r.nextZone || r.unlockedZone || null;
+    const unlockText = unlockedZone ? ` Proxima meta: ${unlockedZone.name}.` : " Has conquistado la ultima zona disponible.";
+    const dropText = r.drops?.length ? ` Drops: ${r.drops.map((drop) => `${drop.quantity || 1}x ${drop.name}`).join(", ")}.` : r.drop ? ` Drop: ${r.drop.name}.` : "";
     status("combatStatus", `Jefe derrotado: +${formatNumber(r.goldEarned)} gold, +${formatNumber(r.xpEarned)} XP.${dropText}${unlockText}`);
     addLog(`Jefe ${boss.name} derrotado.${dropText}${unlockText}`, "success");
 
     await loadCharacter();
+    await loadInventory();
+    await loadZones();
     loadLeaderboard();
   } catch (e) {
     status("combatStatus", `Error: ${e.message}`);
@@ -634,7 +788,7 @@ function showOfflineModal(reward) {
     offlineDrops.innerHTML = drops.length
       ? drops.map((drop) => `
         <div class="drop-item ${String(drop.rarity || "common").toLowerCase()}">
-          <div><strong>${drop.quantity || 1}x ${drop.name}</strong><span>Recompensa offline</span></div>
+          <div><strong>${drop.quantity || 1}x ${drop.name}</strong><span>${itemTypeLabel(drop)} · Recompensa offline</span></div>
           <em class="drop-rarity">${drop.rarity || "common"}</em>
         </div>
       `).join("")
@@ -662,6 +816,7 @@ async function claimOffline() {
     }
 
     await loadCharacter();
+    await loadInventory();
     loadLeaderboard();
   } catch (e) {
     status("combatStatus", `Error: ${e.message}`);
@@ -694,10 +849,49 @@ async function upgrade(stat) {
     status("upgradeStatus", data.message);
     addLog(`${data.message || `Upgrade ${stat} comprado.`}`, "success");
     await loadCharacter();
+    await loadInventory();
     loadLeaderboard();
   } catch (e) {
     status("upgradeStatus", `Error: ${e.message}`);
     addLog(`Error comprando upgrade: ${e.message}`, "error");
+  }
+}
+
+async function equipItem(inventoryItemId) {
+  if (!inventoryItemId) return;
+  try {
+    status("inventoryStatus", "Equipando item...");
+    const data = await api("/inventory/equip", {
+      method: "POST",
+      body: JSON.stringify({ inventoryItemId }),
+    });
+    status("inventoryStatus", data.message || "Item equipado.");
+    addLog(data.message || "Item equipado.", "success");
+    if (data.data?.character) renderCharacter(data.data.character);
+    await loadInventory();
+    loadLeaderboard();
+  } catch (e) {
+    status("inventoryStatus", `Error: ${e.message}`);
+    addLog(`Error equipando item: ${e.message}`, "error");
+  }
+}
+
+async function sellItem(inventoryItemId) {
+  if (!inventoryItemId) return;
+  try {
+    status("inventoryStatus", "Vendiendo item...");
+    const data = await api("/inventory/sell", {
+      method: "POST",
+      body: JSON.stringify({ inventoryItemId, quantity: 1 }),
+    });
+    status("inventoryStatus", data.message || "Item vendido.");
+    addLog(data.message || "Item vendido.", "success");
+    if (data.data?.character) renderCharacter(data.data.character);
+    await loadInventory();
+    loadLeaderboard();
+  } catch (e) {
+    status("inventoryStatus", `Error: ${e.message}`);
+    addLog(`Error vendiendo item: ${e.message}`, "error");
   }
 }
 
@@ -740,6 +934,13 @@ document.querySelectorAll(".upgradeBtn").forEach((button) => {
   button.onclick = () => upgrade(button.dataset.stat);
 });
 
+document.querySelectorAll(".inventoryFilter").forEach((button) => {
+  button.onclick = () => {
+    selectedInventoryFilter = button.dataset.filter;
+    renderInventory();
+  };
+});
+
 $("enemySelect").onchange = () => {
   const enemies = getNormalEnemies(
     character?.currentZone?.enemies ||
@@ -763,9 +964,11 @@ $("enemySelect").onchange = () => {
     status("authStatus", "Token guardado encontrado.");
     addLog("Token guardado encontrado. Cargando personaje...");
     await loadCharacter();
+    await loadInventory();
   } else {
     renderUpgradeButtons();
     renderZones();
+    renderInventory();
   }
 
   renderDropFeed();
