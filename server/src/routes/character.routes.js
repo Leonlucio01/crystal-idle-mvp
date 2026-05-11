@@ -171,4 +171,88 @@ router.post("/upgrade-stat", authMiddleware, async (req, res) => {
   }
 });
 
+router.post("/change-zone", authMiddleware, async (req, res) => {
+  try {
+    const { zoneId } = req.body;
+
+    if (!zoneId) {
+      return res.status(400).json({
+        success: false,
+        message: "zoneId is required",
+      });
+    }
+
+    const character = await prisma.character.findUnique({
+      where: {
+        userId: req.user.id,
+      },
+      include: {
+        currentZone: true,
+      },
+    });
+
+    if (!character) {
+      return res.status(404).json({
+        success: false,
+        message: "Character not found",
+      });
+    }
+
+    const zone = await prisma.zone.findUnique({
+      where: {
+        id: zoneId,
+      },
+      include: {
+        enemies: true,
+      },
+    });
+
+    if (!zone) {
+      return res.status(404).json({
+        success: false,
+        message: "Zone not found",
+      });
+    }
+
+    if (character.level < zone.requiredLevel) {
+      return res.status(403).json({
+        success: false,
+        message: `You need level ${zone.requiredLevel} to enter ${zone.name}`,
+        requiredLevel: zone.requiredLevel,
+        currentLevel: character.level,
+      });
+    }
+
+    const updatedCharacter = await prisma.character.update({
+      where: {
+        id: character.id,
+      },
+      data: {
+        currentZoneId: zone.id,
+      },
+      include: {
+        currentZone: {
+          include: {
+            enemies: true,
+          },
+        },
+        upgrades: true,
+      },
+    });
+
+    res.json({
+      success: true,
+      message: `Moved to ${zone.name}`,
+      data: updatedCharacter,
+    });
+  } catch (error) {
+    console.error("Change zone error:", error);
+
+    res.status(500).json({
+      success: false,
+      message: "Error changing zone",
+    });
+  }
+});
+
 module.exports = router;
