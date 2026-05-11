@@ -108,6 +108,12 @@ button:hover {
   filter: brightness(1.05);
 }
 
+button:disabled {
+  cursor: not-allowed;
+  filter: grayscale(0.35);
+  opacity: 0.55;
+}
+
 .secondary {
   background: rgba(255, 255, 255, 0.12);
   color: #eef3ff;
@@ -245,17 +251,9 @@ button:hover {
 }
 
 @keyframes floatUp {
-  0% {
-    transform: translateY(8px);
-    opacity: 0;
-  }
-  15% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(-34px);
-    opacity: 0;
-  }
+  0% { transform: translateY(8px); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translateY(-34px); opacity: 0; }
 }
 
 .enemy-info {
@@ -314,10 +312,51 @@ button:hover {
   font-size: 18px;
 }
 
+.gold-hint {
+  color: #facc15;
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .upgradeGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 12px;
+}
+
+.upgradeBtn {
+  min-height: 74px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  text-align: left;
+  padding: 14px 16px;
+}
+
+.upgradeBtn.affordable {
+  background: linear-gradient(135deg, #76e4ff, #b69cff);
+}
+
+.upgradeBtn.expensive {
+  background: rgba(255, 255, 255, 0.12);
+  color: #eef3ff;
+}
+
+.upgrade-title {
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.upgrade-meta {
+  font-size: 12px;
+  opacity: 0.88;
+}
+
+.upgrade-warning {
+  color: #fb7185;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 table {

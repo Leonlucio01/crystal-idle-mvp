@@ -1,4 +1,4 @@
-# Client Web Prototype - Combat Visuals
+# Client Web Prototype - Upgrade Costs
 
 Prototipo web para probar la API online de Crystal Idle MVP.
 
@@ -20,7 +20,9 @@ https://crystal-idle-api.onrender.com
 - Daño flotante
 - Recompensa flotante
 - Animación simple de golpe y muerte
-- Mejorar ATK, DEF, HP y CRIT
+- Mostrar costo de upgrades
+- Mostrar nivel de upgrades
+- Desactivar upgrades si no hay oro suficiente
 - Reclamar recompensas offline
 - Ver ranking de poder
 

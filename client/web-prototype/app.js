@@ -52,6 +52,45 @@ async function loadZones() {
   }
 }
 
+function getUpgrade(stat) {
+  return character?.upgrades?.find((upgrade) => upgrade.stat === stat);
+}
+
+function renderUpgradeButtons() {
+  const gold = character?.gold ?? 0;
+  const buttons = document.querySelectorAll(".upgradeBtn");
+
+  $("upgradeGoldHint").textContent = `Gold: ${gold}`;
+
+  buttons.forEach((button) => {
+    const stat = button.dataset.stat;
+    const upgrade = getUpgrade(stat);
+
+    if (!character || !upgrade) {
+      button.disabled = true;
+      button.classList.remove("affordable", "expensive");
+      button.innerHTML =
+        `<span class="upgrade-title">Subir ${stat}</span>` +
+        `<span class="upgrade-meta">Nivel -- · Coste -- gold</span>`;
+      return;
+    }
+
+    const cost = upgrade.currentCost;
+    const canAfford = gold >= cost;
+
+    button.disabled = !canAfford;
+    button.classList.toggle("affordable", canAfford);
+    button.classList.toggle("expensive", !canAfford);
+
+    button.innerHTML =
+      `<span class="upgrade-title">Subir ${stat}</span>` +
+      `<span class="upgrade-meta">Nivel ${upgrade.level} · Coste ${cost} gold</span>` +
+      (!canAfford
+        ? `<span class="upgrade-warning">Necesitas ${cost - gold} gold más</span>`
+        : `<span class="upgrade-meta">Disponible</span>`);
+  });
+}
+
 function renderCharacter(c) {
   character = c;
 
@@ -80,6 +119,7 @@ function renderCharacter(c) {
   }
 
   renderEnemies(enemies);
+  renderUpgradeButtons();
 }
 
 function renderEnemies(enemies) {
@@ -386,6 +426,19 @@ async function claimOffline() {
 
 async function upgrade(stat) {
   try {
+    const upgradeInfo = getUpgrade(stat);
+
+    if (!upgradeInfo) {
+      return status("upgradeStatus", `No se encontró upgrade para ${stat}.`);
+    }
+
+    if ((character?.gold ?? 0) < upgradeInfo.currentCost) {
+      return status(
+        "upgradeStatus",
+        `Necesitas ${upgradeInfo.currentCost - character.gold} gold más para subir ${stat}.`
+      );
+    }
+
     status("upgradeStatus", `Mejorando ${stat}...`);
 
     const data = await api("/character/upgrade-stat", {
@@ -433,7 +486,7 @@ $("autoFarmBtn").onclick = toggleAutoFarm;
 $("offlineBtn").onclick = claimOffline;
 $("leaderboardBtn").onclick = loadLeaderboard;
 
-document.querySelectorAll(".upgradeGrid button").forEach((button) => {
+document.querySelectorAll(".upgradeBtn").forEach((button) => {
   button.onclick = () => upgrade(button.dataset.stat);
 });
 
@@ -459,6 +512,8 @@ $("enemySelect").onchange = () => {
   if (token) {
     status("authStatus", "Token guardado encontrado.");
     await loadCharacter();
+  } else {
+    renderUpgradeButtons();
   }
 
   updateFarmButton();

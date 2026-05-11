@@ -105,16 +105,34 @@
       </article>
 
       <article class="card">
-        <h2>Upgrades</h2>
-
-        <div class="upgradeGrid">
-          <button data-stat="ATK">Subir ATK</button>
-          <button data-stat="DEF">Subir DEF</button>
-          <button data-stat="HP">Subir HP</button>
-          <button data-stat="CRIT">Subir CRIT</button>
+        <div class="row">
+          <h2>Upgrades</h2>
+          <span id="upgradeGoldHint" class="gold-hint">Gold: 0</span>
         </div>
 
-        <p id="upgradeStatus" class="status">---</p>
+        <div class="upgradeGrid">
+          <button class="upgradeBtn" data-stat="ATK">
+            <span class="upgrade-title">Subir ATK</span>
+            <span class="upgrade-meta">Nivel -- · Coste -- gold</span>
+          </button>
+
+          <button class="upgradeBtn" data-stat="DEF">
+            <span class="upgrade-title">Subir DEF</span>
+            <span class="upgrade-meta">Nivel -- · Coste -- gold</span>
+          </button>
+
+          <button class="upgradeBtn" data-stat="HP">
+            <span class="upgrade-title">Subir HP</span>
+            <span class="upgrade-meta">Nivel -- · Coste -- gold</span>
+          </button>
+
+          <button class="upgradeBtn" data-stat="CRIT">
+            <span class="upgrade-title">Subir CRIT</span>
+            <span class="upgrade-meta">Nivel -- · Coste -- gold</span>
+          </button>
+        </div>
+
+        <p id="upgradeStatus" class="status">Inicia sesión para ver costos.</p>
       </article>
 
       <article class="card wide">
