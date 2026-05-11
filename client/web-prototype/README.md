@@ -1,12 +1,11 @@
-# Client Web Prototype - Upgrade Costs
+# Client Web Prototype - Upgrade Costs Fixed
 
-Prototipo web para probar la API online de Crystal Idle MVP.
+Esta versión corrige el bloqueo de upgrades después de matar enemigos o subir stats.
 
-## API usada
+## Corrección importante
 
-```txt
-https://crystal-idle-api.onrender.com
-```
+Algunos endpoints como `/combat/kill` y `/character/upgrade-stat` devuelven el personaje actualizado, pero no siempre devuelven la lista `upgrades`.  
+Por eso el cliente ahora vuelve a consultar `/character/me` después de acciones importantes.
 
 ## Funciones
 
@@ -14,36 +13,11 @@ https://crystal-idle-api.onrender.com
 - Login
 - Ver personaje
 - Matar enemigo
-- Auto Farm cada 2 segundos
-- Barra de progreso de Auto Farm
+- Auto Farm
 - Barra de HP del enemigo
 - Daño flotante
 - Recompensa flotante
-- Animación simple de golpe y muerte
 - Mostrar costo de upgrades
-- Mostrar nivel de upgrades
 - Desactivar upgrades si no hay oro suficiente
-- Reclamar recompensas offline
-- Ver ranking de poder
-
-## Cómo usar
-
-Copia esta carpeta dentro de:
-
-```txt
-crystal-idle-mvp/client/web-prototype/
-```
-
-Abre `index.html` directamente en el navegador.
-
-Si prefieres servirlo localmente:
-
-```bash
-python -m http.server 5173
-```
-
-Luego abre:
-
-```txt
-http://localhost:5173
-```
+- Reclamar offline
+- Ranking
