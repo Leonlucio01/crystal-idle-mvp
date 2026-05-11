@@ -7,6 +7,7 @@ const authRoutes = require("./routes/auth.routes");
 const characterRoutes = require("./routes/character.routes");
 const combatRoutes = require("./routes/combat.routes");
 const idleRoutes = require("./routes/idle.routes");
+const leaderboardRoutes = require("./routes/leaderboard.routes");
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use("/auth", authRoutes);
 app.use("/character", characterRoutes);
 app.use("/combat", combatRoutes);
 app.use("/idle", idleRoutes);
+app.use("/leaderboard", leaderboardRoutes);
 
 const PORT = process.env.PORT || 3000;
 
