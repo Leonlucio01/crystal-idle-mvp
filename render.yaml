@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: crystal-idle-api
+    env: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: crystal-idle-db
+          property: connectionString
+
+databases:
+  - name: crystal-idle-db
+    plan: free
