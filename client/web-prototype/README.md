@@ -1,23 +1,38 @@
-# Client Web Prototype - Upgrade Costs Fixed
+# Client Web Prototype - Zone Selector
 
-Esta versión corrige el bloqueo de upgrades después de matar enemigos o subir stats.
+Versión del cliente web con selector visual de zonas.
 
-## Corrección importante
+## Incluye
 
-Algunos endpoints como `/combat/kill` y `/character/upgrade-stat` devuelven el personaje actualizado, pero no siempre devuelven la lista `upgrades`.  
-Por eso el cliente ahora vuelve a consultar `/character/me` después de acciones importantes.
-
-## Funciones
-
-- Registro
-- Login
-- Ver personaje
-- Matar enemigo
+- Registro/login
+- Personaje
+- Combate
 - Auto Farm
-- Barra de HP del enemigo
-- Daño flotante
-- Recompensa flotante
-- Mostrar costo de upgrades
-- Desactivar upgrades si no hay oro suficiente
-- Reclamar offline
+- Offline rewards
+- Upgrades con costo
 - Ranking
+- Panel de zonas
+- Zonas bloqueadas por nivel
+- Cambio de zona usando `POST /character/change-zone`
+
+## Uso
+
+Copia estos archivos en:
+
+```txt
+crystal-idle-mvp/client/web-prototype/
+```
+
+Luego abre `index.html`.
+
+Si quieres servirlo localmente:
+
+```bash
+python -m http.server 5173
+```
+
+y abre:
+
+```txt
+http://localhost:5173
+```

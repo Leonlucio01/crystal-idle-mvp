@@ -32,6 +32,7 @@ async function loadZones() {
   try {
     const data = await api("/zones");
     zones = data.data || [];
+    renderZones();
   } catch (e) {
     console.error("Error loading zones:", e);
     status("combatStatus", `Error cargando zonas: ${e.message}`);
@@ -40,7 +41,6 @@ async function loadZones() {
 
 function normalizeCharacter(c) {
   if (!c) return c;
-
   const previousUpgrades = character?.upgrades || [];
   const previousCurrentZone = character?.currentZone;
 
@@ -53,6 +53,60 @@ function normalizeCharacter(c) {
 
 function getUpgrade(stat) {
   return character?.upgrades?.find((upgrade) => upgrade.stat === stat);
+}
+
+function renderZones() {
+  const container = $("zoneList");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  if (!zones.length) {
+    container.innerHTML = `<p class="status">No hay zonas cargadas.</p>`;
+    return;
+  }
+
+  const currentZoneId = character?.currentZoneId || character?.currentZone?.id;
+  const characterLevel = character?.level ?? 0;
+
+  $("zoneStatus").textContent = character
+    ? `Nivel actual: ${characterLevel}`
+    : "Inicia sesión para cambiar de zona.";
+
+  zones.forEach((zone) => {
+    const isCurrent = zone.id === currentZoneId;
+    const isUnlocked = character && characterLevel >= zone.requiredLevel;
+
+    const card = document.createElement("div");
+    card.className =
+      "zone-card" +
+      (isCurrent ? " current" : "") +
+      (!isUnlocked ? " locked" : "");
+
+    const enemyNames = (zone.enemies || [])
+      .map((enemy) => enemy.isBoss ? `${enemy.name} (Boss)` : enemy.name)
+      .join(", ");
+
+    card.innerHTML = `
+      <div class="zone-meta">
+        <span class="badge ${isCurrent ? "current" : isUnlocked ? "ok" : "locked"}">
+          ${isCurrent ? "Actual" : isUnlocked ? "Disponible" : "Bloqueada"}
+        </span>
+        <span class="badge">Nivel ${zone.requiredLevel}+</span>
+      </div>
+      <h3>${zone.name}</h3>
+      <p>${zone.description || ""}</p>
+      <p><strong>Enemigos:</strong> ${enemyNames}</p>
+      <button data-zone-id="${zone.id}" ${!isUnlocked || isCurrent ? "disabled" : ""}>
+        ${isCurrent ? "Zona actual" : isUnlocked ? "Entrar" : `Requiere nivel ${zone.requiredLevel}`}
+      </button>
+    `;
+
+    const button = card.querySelector("button");
+    button.onclick = () => changeZone(zone.id);
+
+    container.appendChild(card);
+  });
 }
 
 function renderUpgradeButtons() {
@@ -128,6 +182,7 @@ function renderCharacter(c) {
 
   renderEnemies(enemies);
   renderUpgradeButtons();
+  renderZones();
 }
 
 function renderEnemies(enemies) {
@@ -270,6 +325,27 @@ async function loadCharacter() {
     renderCharacter(data.data);
   } catch (e) {
     status("authStatus", `Error: ${e.message}`);
+  }
+}
+
+async function changeZone(zoneId) {
+  if (!token) return status("zoneStatus", "Primero inicia sesión.");
+
+  try {
+    if (autoFarmEnabled) toggleAutoFarm();
+
+    status("zoneStatus", "Cambiando zona...");
+
+    const data = await api("/character/change-zone", {
+      method: "POST",
+      body: JSON.stringify({ zoneId }),
+    });
+
+    status("zoneStatus", data.message);
+    renderCharacter(data.data);
+    loadLeaderboard();
+  } catch (e) {
+    status("zoneStatus", `Error: ${e.message}`);
   }
 }
 
@@ -465,6 +541,7 @@ $("enemySelect").onchange = () => {
     await loadCharacter();
   } else {
     renderUpgradeButtons();
+    renderZones();
   }
 
   updateFarmButton();
