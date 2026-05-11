@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Crystal Idle MVP</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main class="app">
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Crystal Idle MVP</p>
+        <h1>Web Prototype</h1>
+        <p>Cliente simple conectado a tu API online de Render.</p>
+      </div>
+      <div class="api">API: <strong>https://crystal-idle-api.onrender.com</strong></div>
+    </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>Cuenta</h2>
+        <label>Email</label>
+        <input id="email" value="prodtest@example.com" />
+        <label>Password</label>
+        <input id="password" type="password" value="123456" />
+        <label>Personaje</label>
+        <input id="characterName" value="ProdHero" />
+        <div class="buttons">
+          <button id="registerBtn">Registrar</button>
+          <button id="loginBtn" class="secondary">Login</button>
+        </div>
+        <p id="authStatus" class="status">Sin sesión.</p>
+      </article>
+
+      <article class="card">
+        <div class="row">
+          <h2>Personaje</h2>
+          <button id="refreshCharacterBtn" class="small">Actualizar</button>
+        </div>
+        <div class="avatarBox">
+          <div class="avatar"></div>
+          <div>
+            <h3 id="name">---</h3>
+            <p id="className">---</p>
+          </div>
+        </div>
+        <div class="stats">
+          <div><span>Level</span><b id="level">0</b></div>
+          <div><span>XP</span><b id="xp">0</b></div>
+          <div><span>Gold</span><b id="gold">0</b></div>
+          <div><span>Power</span><b id="power">0</b></div>
+          <div><span>ATK</span><b id="atk">0</b></div>
+          <div><span>DEF</span><b id="def">0</b></div>
+          <div><span>HP</span><b id="hp">0</b></div>
+          <div><span>CRIT</span><b id="crit">0%</b></div>
+        </div>
+      </article>
+
+      <article class="card">
+        <h2>Combate</h2>
+        <p>Zona: <strong id="zone">---</strong></p>
+        <label>Enemigo</label>
+        <select id="enemySelect"></select>
+        <div class="monsterBox">
+          <div class="monster"></div>
+          <div>
+            <h3 id="enemyName">---</h3>
+            <p id="enemyStats">---</p>
+          </div>
+        </div>
+        <div class="buttons">
+          <button id="killBtn">Matar enemigo</button>
+          <button id="offlineBtn" class="secondary">Reclamar offline</button>
+        </div>
+        <p id="combatStatus" class="status">Esperando acción...</p>
+      </article>
+
+      <article class="card">
+        <h2>Upgrades</h2>
+        <div class="upgradeGrid">
+          <button data-stat="ATK">Subir ATK</button>
+          <button data-stat="DEF">Subir DEF</button>
+          <button data-stat="HP">Subir HP</button>
+          <button data-stat="CRIT">Subir CRIT</button>
+        </div>
+        <p id="upgradeStatus" class="status">---</p>
+      </article>
+
+      <article class="card wide">
+        <div class="row">
+          <h2>Ranking</h2>
+          <button id="leaderboardBtn" class="small">Actualizar</button>
+        </div>
+        <table>
+          <thead><tr><th>#</th><th>Nombre</th><th>Clase</th><th>Level</th><th>Power</th><th>Zona</th></tr></thead>
+          <tbody id="leaderboard"></tbody>
+        </table>
+      </article>
+    </section>
+  </main>
+  <script src="./app.js"></script>
+</body>
+</html>
