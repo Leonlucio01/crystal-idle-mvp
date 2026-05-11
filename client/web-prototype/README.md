@@ -1,4 +1,4 @@
-# Client Web Prototype
+# Client Web Prototype - Auto Farm
 
 Prototipo web simple para probar la API online de Crystal Idle MVP.
 
@@ -14,6 +14,8 @@ https://crystal-idle-api.onrender.com
 - Login
 - Ver personaje
 - Matar enemigo
+- Auto Farm cada 2 segundos
+- Barra de progreso de Auto Farm
 - Mejorar ATK, DEF, HP y CRIT
 - Reclamar recompensas offline
 - Ver ranking de poder

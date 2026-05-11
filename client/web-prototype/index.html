@@ -20,16 +20,21 @@
     <section class="grid">
       <article class="card">
         <h2>Cuenta</h2>
+
         <label>Email</label>
         <input id="email" value="prodtest@example.com" />
+
         <label>Password</label>
         <input id="password" type="password" value="123456" />
+
         <label>Personaje</label>
         <input id="characterName" value="ProdHero" />
+
         <div class="buttons">
           <button id="registerBtn">Registrar</button>
           <button id="loginBtn" class="secondary">Login</button>
         </div>
+
         <p id="authStatus" class="status">Sin sesión.</p>
       </article>
 
@@ -38,6 +43,7 @@
           <h2>Personaje</h2>
           <button id="refreshCharacterBtn" class="small">Actualizar</button>
         </div>
+
         <div class="avatarBox">
           <div class="avatar"></div>
           <div>
@@ -45,6 +51,7 @@
             <p id="className">---</p>
           </div>
         </div>
+
         <div class="stats">
           <div><span>Level</span><b id="level">0</b></div>
           <div><span>XP</span><b id="xp">0</b></div>
@@ -60,8 +67,10 @@
       <article class="card">
         <h2>Combate</h2>
         <p>Zona: <strong id="zone">---</strong></p>
+
         <label>Enemigo</label>
         <select id="enemySelect"></select>
+
         <div class="monsterBox">
           <div class="monster"></div>
           <div>
@@ -69,21 +78,30 @@
             <p id="enemyStats">---</p>
           </div>
         </div>
+
         <div class="buttons">
           <button id="killBtn">Matar enemigo</button>
+          <button id="autoFarmBtn" class="auto">Auto Farm: OFF</button>
           <button id="offlineBtn" class="secondary">Reclamar offline</button>
         </div>
+
+        <div class="farm-bar">
+          <div id="farmProgress"></div>
+        </div>
+
         <p id="combatStatus" class="status">Esperando acción...</p>
       </article>
 
       <article class="card">
         <h2>Upgrades</h2>
+
         <div class="upgradeGrid">
           <button data-stat="ATK">Subir ATK</button>
           <button data-stat="DEF">Subir DEF</button>
           <button data-stat="HP">Subir HP</button>
           <button data-stat="CRIT">Subir CRIT</button>
         </div>
+
         <p id="upgradeStatus" class="status">---</p>
       </article>
 
@@ -92,13 +110,24 @@
           <h2>Ranking</h2>
           <button id="leaderboardBtn" class="small">Actualizar</button>
         </div>
+
         <table>
-          <thead><tr><th>#</th><th>Nombre</th><th>Clase</th><th>Level</th><th>Power</th><th>Zona</th></tr></thead>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Nombre</th>
+              <th>Clase</th>
+              <th>Level</th>
+              <th>Power</th>
+              <th>Zona</th>
+            </tr>
+          </thead>
           <tbody id="leaderboard"></tbody>
         </table>
       </article>
     </section>
   </main>
+
   <script src="./app.js"></script>
 </body>
 </html>
