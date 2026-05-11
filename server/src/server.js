@@ -6,6 +6,7 @@ const zoneRoutes = require("./routes/zone.routes");
 const authRoutes = require("./routes/auth.routes");
 const characterRoutes = require("./routes/character.routes");
 const combatRoutes = require("./routes/combat.routes");
+const idleRoutes = require("./routes/idle.routes");
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use("/zones", zoneRoutes);
 app.use("/auth", authRoutes);
 app.use("/character", characterRoutes);
 app.use("/combat", combatRoutes);
+app.use("/idle", idleRoutes);
 
 const PORT = process.env.PORT || 3000;
 
