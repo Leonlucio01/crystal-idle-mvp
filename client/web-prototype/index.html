@@ -1,171 +1,82 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Crystal Idle MVP</title>
-  <link rel="stylesheet" href="./styles.css" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Crystal Idle Web</title>
+  <style>
+    :root {
+      --bg:#070b17; --panel:rgba(11,18,36,.9); --panel2:rgba(20,31,59,.92);
+      --line:rgba(122,219,255,.22); --cyan:#65e7ff; --purple:#9f7aff;
+      --gold:#ffd94a; --green:#74f7a8; --red:#ff6b83; --orange:#ff9f1c;
+      --text:#edf7ff; --muted:#9fb0d0; --radius:22px;
+    }
+    *{box-sizing:border-box} html,body{margin:0;min-height:100%;font-family:Inter,system-ui,Segoe UI,sans-serif;color:var(--text);
+      background:radial-gradient(circle at 20% 0%,rgba(102,231,255,.14),transparent 28%),
+      radial-gradient(circle at 80% 10%,rgba(159,122,255,.16),transparent 30%),
+      linear-gradient(135deg,#080b17,#0a1024 50%,#080917)}
+    body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.32;background-image:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:52px 52px;mask-image:linear-gradient(to bottom,#000,transparent 85%)}
+    button,input,select{font:inherit}.hidden{display:none!important}
+    .topbar{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,rgba(7,11,23,.95),rgba(7,11,23,.72));backdrop-filter:blur(14px);border-bottom:1px solid rgba(122,219,255,.12);padding:18px 16px}
+    .topbar-inner,.app{width:min(1420px,calc(100vw - 32px));margin:0 auto}.topbar-inner{display:flex;justify-content:space-between;align-items:center;gap:18px}.app{padding:24px 0 52px}
+    .brand{display:flex;gap:14px;align-items:center}.logo{width:48px;height:48px;border-radius:16px;background:radial-gradient(circle at 35% 25%,#fff,transparent 12%),linear-gradient(135deg,var(--cyan),var(--purple));box-shadow:0 0 32px rgba(101,231,255,.28);position:relative}.logo:after{content:"";position:absolute;inset:12px 15px 8px;background:#081124;clip-path:polygon(50% 0,100% 32%,84% 100%,16% 100%,0 32%)}
+    h1{margin:0;font-size:clamp(24px,3vw,42px);letter-spacing:-.04em;line-height:1}.subtitle{margin-top:5px;color:var(--muted);font-size:14px}.top-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end}.badge{border:1px solid rgba(122,219,255,.22);background:rgba(14,22,43,.8);color:var(--muted);padding:8px 11px;border-radius:999px;font-size:13px}.badge strong{color:var(--gold)}
+    .grid{display:grid;grid-template-columns:380px 1fr;gap:18px;align-items:start}.right-grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}.span-2{grid-column:span 2}
+    .panel{background:linear-gradient(180deg,rgba(18,28,54,.93),rgba(10,15,30,.93));border:1px solid var(--line);border-radius:var(--radius);box-shadow:0 24px 60px rgba(0,0,0,.35);overflow:hidden}.panel-header{padding:17px 18px;display:flex;justify-content:space-between;align-items:center;gap:12px;border-bottom:1px solid rgba(122,219,255,.12);background:rgba(5,11,26,.42)}.panel-title{margin:0;color:var(--cyan);font-size:15px;letter-spacing:.12em;text-transform:uppercase;font-weight:850}.panel-body{padding:18px}.auth-card{max-width:520px;margin:70px auto}
+    .field{display:grid;gap:7px;margin-bottom:12px}.field label{color:#c9d8ff;font-size:13px;font-weight:750}input,select{width:100%;background:rgba(6,11,25,.86);color:var(--text);border:1px solid rgba(122,219,255,.2);border-radius:14px;padding:12px 13px;outline:none}input:focus,select:focus{border-color:rgba(101,231,255,.85);box-shadow:0 0 0 4px rgba(101,231,255,.08)}select option{color:#0b1324;background:#f3f7ff}
+    .btn-row{display:flex;gap:10px;flex-wrap:wrap}.btn{border:0;border-radius:15px;padding:12px 16px;font-weight:850;color:#081020;cursor:pointer;background:linear-gradient(135deg,var(--cyan),var(--purple));box-shadow:0 10px 26px rgba(101,231,255,.12);transition:.14s;min-height:44px}.btn:hover:not(:disabled){transform:translateY(-1px);filter:brightness(1.08)}.btn:disabled{opacity:.48;cursor:not-allowed}.btn.secondary{color:var(--text);background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.1);box-shadow:none}.btn.gold{background:linear-gradient(135deg,#ffe66a,#ff9f1c)}.btn.green{background:linear-gradient(135deg,#73f7ac,#44d6d0)}.btn.red{background:linear-gradient(135deg,#ff6b83,#ff9f1c)}.btn.purple{background:linear-gradient(135deg,#9f7aff,#65e7ff)}
+    .status{margin-top:14px;min-height:22px;color:#d8e7ff;line-height:1.45}.error{color:var(--red)}.success{color:var(--green)}.gold-text{color:var(--gold);font-weight:900}.cyan-text{color:var(--cyan);font-weight:900}.purple-text{color:var(--purple);font-weight:900}
+    .hero-card{display:grid;gap:16px}.avatar-row{display:flex;gap:14px;align-items:center}.avatar{width:84px;height:84px;border-radius:25px;background:linear-gradient(135deg,var(--cyan),var(--purple));box-shadow:0 0 38px rgba(101,231,255,.25);position:relative}.avatar:before{content:"";position:absolute;width:26px;height:26px;border-radius:999px;background:#ffdca8;top:16px;left:29px}.avatar:after{content:"";position:absolute;width:46px;height:34px;border-radius:18px 18px 10px 10px;background:#17223f;bottom:14px;left:19px}.hero-name{font-size:25px;font-weight:950;margin:0 0 4px}.hero-class{color:var(--purple);font-weight:850;letter-spacing:.08em;text-transform:uppercase}
+    .stat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.stat{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.06);border-radius:16px;padding:12px}.stat label{display:block;color:#a9badb;font-size:11px;text-transform:uppercase;letter-spacing:.09em;margin-bottom:4px}.stat strong{font-size:20px;line-height:1.1}.power-card{border:1px solid rgba(255,217,74,.24);background:radial-gradient(circle at 12% 0%,rgba(255,217,74,.15),transparent 40%),rgba(255,217,74,.04);border-radius:18px;padding:14px}
+    .zone-list{display:grid;gap:12px}.zone-card{background:rgba(255,255,255,.055);border:1px solid rgba(122,219,255,.14);border-radius:18px;padding:14px;display:grid;gap:8px}.zone-card.current{border-color:rgba(101,231,255,.78);box-shadow:inset 0 0 0 1px rgba(101,231,255,.12),0 0 28px rgba(101,231,255,.08)}.zone-card.locked{opacity:.54;filter:grayscale(.25)}.zone-head{display:flex;justify-content:space-between;gap:12px;align-items:center}.zone-name{font-weight:950;font-size:18px}.pill{padding:5px 9px;border-radius:999px;font-size:11px;font-weight:900;background:rgba(101,231,255,.12);color:var(--cyan);white-space:nowrap}.pill.gold{background:rgba(255,217,74,.12);color:var(--gold)}.pill.green{background:rgba(116,247,168,.12);color:var(--green)}.pill.red{background:rgba(255,107,131,.12);color:var(--red)}.zone-desc,.small{color:var(--muted);font-size:13px;line-height:1.45}
+    .combat-layout{display:grid;grid-template-columns:170px 1fr;gap:16px;align-items:center}.enemy-art{height:150px;border-radius:28px;background:radial-gradient(circle at 39% 40%,#071022 0 5px,transparent 6px),radial-gradient(circle at 62% 40%,#071022 0 5px,transparent 6px),radial-gradient(circle at 50% 106%,#38df72 0 78px,transparent 79px),radial-gradient(circle at 50% 112%,rgba(69,247,139,.36),transparent 86px);border:1px solid rgba(116,247,168,.18);box-shadow:inset 0 -20px 40px rgba(0,0,0,.22),0 0 42px rgba(116,247,168,.15)}.hp-wrap{margin:12px 0}.hp-label{display:flex;justify-content:space-between;color:#d8e7ff;font-size:12px;margin-bottom:6px}.bar{height:14px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.09);border:1px solid rgba(255,255,255,.06)}.bar>span{display:block;height:100%;border-radius:inherit;width:100%;background:linear-gradient(90deg,var(--red),var(--orange),var(--gold));transition:width .18s}.reward{display:inline-flex;gap:8px;align-items:center;color:var(--gold);font-weight:900;margin:6px 0 12px}
+    .upgrade-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.upgrade-card{text-align:left;color:#071020;padding:14px;border-radius:18px;border:0;cursor:pointer;font-weight:900;background:linear-gradient(135deg,var(--cyan),var(--purple));min-height:82px;transition:.14s}.upgrade-card:hover:not(:disabled){transform:translateY(-1px)}.upgrade-card:disabled{opacity:.52;cursor:not-allowed}.upgrade-card small{display:block;color:rgba(7,16,32,.75);margin-top:6px;font-weight:800}
+    .ranking-table{width:100%;border-collapse:collapse}.ranking-table th,.ranking-table td{padding:12px 10px;text-align:left;border-bottom:1px solid rgba(122,219,255,.1);font-size:14px}.ranking-table th{color:var(--cyan);text-transform:uppercase;letter-spacing:.08em;font-size:11px}.empty{color:var(--muted);text-align:center;padding:24px}.toast{position:fixed;right:18px;bottom:18px;z-index:50;max-width:min(420px,calc(100vw - 36px));background:rgba(6,11,25,.94);border:1px solid rgba(101,231,255,.22);border-radius:18px;padding:14px 16px;box-shadow:0 18px 50px rgba(0,0,0,.45);color:#d8e7ff;transform:translateY(16px);opacity:0;pointer-events:none;transition:.2s}.toast.show{opacity:1;transform:translateY(0)}
+    .autofarm{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.07);border-radius:16px;padding:12px;margin-top:12px}.progress-tick{margin-top:10px;height:9px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden}.progress-tick span{display:block;height:100%;width:0%;background:linear-gradient(90deg,var(--cyan),var(--purple));transition:width .08s linear}
+    @media(max-width:1060px){.grid,.right-grid{grid-template-columns:1fr}.span-2{grid-column:span 1}.auth-card{margin:28px auto}.combat-layout{grid-template-columns:1fr}.enemy-art{height:120px}}@media(max-width:620px){.app{width:min(100vw - 20px,1420px);padding-top:12px}.topbar-inner{align-items:flex-start;flex-direction:column}.stat-grid,.upgrade-grid{grid-template-columns:1fr}.btn{width:100%}.btn-row{flex-direction:column}.panel-body,.panel-header{padding:14px}}
+  </style>
 </head>
 <body>
+  <div class="topbar"><div class="topbar-inner"><div class="brand"><div class="logo"></div><div><h1>Crystal Idle</h1><div class="subtitle">Online Idle RPG conectado a tu API</div></div></div><div class="top-actions"><span class="badge">API: <strong>Render</strong></span><span class="badge" id="session-badge">Sin sesión</span><button class="btn secondary hidden" id="btn-refresh-top">Actualizar</button><button class="btn red hidden" id="btn-logout-top">Salir</button></div></div></div>
   <main class="app">
-    <section class="hero">
-      <div>
-        <p class="eyebrow">Crystal Idle MVP</p>
-        <h1>Web Prototype</h1>
-        <p>Cliente simple conectado a tu API online de Render.</p>
-      </div>
-      <div class="api">API: <strong>https://crystal-idle-api.onrender.com</strong></div>
+    <section class="panel auth-card" id="auth-view"><div class="panel-header"><h2 class="panel-title">Cuenta</h2><span class="pill">MVP Web</span></div><div class="panel-body"><div class="field"><label>Email</label><input id="email" type="email" autocomplete="email" value="prodtest@example.com"></div><div class="field"><label>Password</label><input id="password" type="password" autocomplete="current-password" value="123456"></div><div class="field"><label>Nombre del personaje</label><input id="characterName" type="text" value="ProdHero"></div><div class="btn-row"><button class="btn" id="btn-login">Login</button><button class="btn secondary" id="btn-register">Registrar</button></div><div class="status" id="auth-status">Inicia sesión para continuar.</div></div></section>
+    <section class="grid hidden" id="game-view">
+      <aside class="panel hero-card"><div class="panel-header"><h2 class="panel-title">Personaje</h2><span class="pill gold" id="hero-zone-pill">Zona</span></div><div class="panel-body hero-card"><div class="avatar-row"><div class="avatar"></div><div><h3 class="hero-name" id="hero-name">---</h3><div class="hero-class" id="hero-class">---</div></div></div><div class="power-card"><div class="small">Poder total</div><div class="cyan-text" style="font-size:34px;line-height:1" id="hero-power">0</div></div><div class="stat-grid"><div class="stat"><label>Nivel</label><strong id="hero-level">0</strong></div><div class="stat"><label>XP</label><strong id="hero-xp">0</strong></div><div class="stat"><label>Oro</label><strong class="gold-text" id="hero-gold">0</strong></div><div class="stat"><label>HP</label><strong id="hero-hp">0/0</strong></div><div class="stat"><label>ATK</label><strong id="hero-atk">0</strong></div><div class="stat"><label>DEF</label><strong id="hero-def">0</strong></div><div class="stat"><label>CRIT</label><strong id="hero-crit">0%</strong></div><div class="stat"><label>Zona</label><strong id="hero-zone">---</strong></div></div><div class="status" id="character-status">Héroe listo.</div></div></aside>
+      <section class="right-grid">
+        <div class="panel span-2"><div class="panel-header"><h2 class="panel-title">Zonas</h2><span class="pill" id="current-level-pill">Nivel actual</span></div><div class="panel-body"><div class="zone-list" id="zone-list"></div></div></div>
+        <div class="panel"><div class="panel-header"><h2 class="panel-title">Combate</h2><span class="pill green" id="combat-zone-pill">Zona actual</span></div><div class="panel-body"><div class="field"><label>Enemigo</label><select id="enemy-select"></select></div><div class="combat-layout"><div class="enemy-art"></div><div><div class="purple-text" style="font-size:24px" id="enemy-name">---</div><div class="small" id="enemy-stats">---</div><div class="hp-wrap"><div class="hp-label"><span>HP</span><span id="enemy-hp-label">0 / 0</span></div><div class="bar"><span id="enemy-hp-bar"></span></div></div><div class="reward" id="enemy-reward">---</div><button class="btn gold" id="btn-kill">Atacar</button></div></div><div class="autofarm"><div><strong>Auto Farm</strong><div class="small" id="autofarm-text">Apagado</div></div><button class="btn green" id="btn-autofarm">Auto Farm: OFF</button></div><div class="progress-tick"><span id="autofarm-bar"></span></div><div class="status" id="combat-status">Selecciona un enemigo para atacar.</div></div></div>
+        <div class="panel"><div class="panel-header"><h2 class="panel-title">Upgrades</h2><span class="pill gold" id="upgrade-gold">Gold: 0</span></div><div class="panel-body"><div class="upgrade-grid"><button class="upgrade-card" data-stat="atk">Subir ATK<small id="cost-atk">Cargando...</small></button><button class="upgrade-card" data-stat="def">Subir DEF<small id="cost-def">Cargando...</small></button><button class="upgrade-card" data-stat="hp">Subir HP<small id="cost-hp">Cargando...</small></button><button class="upgrade-card" data-stat="crit">Subir CRIT<small id="cost-crit">Cargando...</small></button></div><div class="status" id="upgrade-status">Mejora tus atributos con oro.</div></div></div>
+        <div class="panel span-2"><div class="panel-header"><h2 class="panel-title">Ranking de poder</h2><button class="btn secondary" id="btn-ranking">Actualizar ranking</button></div><div class="panel-body"><table class="ranking-table"><thead><tr><th>#</th><th>Nombre</th><th>Clase</th><th>Nivel</th><th>Poder</th><th>Zona</th></tr></thead><tbody id="ranking-body"><tr><td colspan="6" class="empty">Cargando ranking...</td></tr></tbody></table></div></div>
+      </section>
     </section>
-
-    <section class="grid">
-      <article class="card">
-        <h2>Cuenta</h2>
-
-        <label>Email</label>
-        <input id="email" value="prodtest@example.com" />
-
-        <label>Password</label>
-        <input id="password" type="password" value="123456" />
-
-        <label>Personaje</label>
-        <input id="characterName" value="ProdHero" />
-
-        <div class="buttons">
-          <button id="registerBtn">Registrar</button>
-          <button id="loginBtn" class="secondary">Login</button>
-        </div>
-
-        <p id="authStatus" class="status">Sin sesión.</p>
-      </article>
-
-      <article class="card">
-        <div class="row">
-          <h2>Personaje</h2>
-          <button id="refreshCharacterBtn" class="small">Actualizar</button>
-        </div>
-
-        <div class="avatarBox">
-          <div class="avatar"></div>
-          <div>
-            <h3 id="name">---</h3>
-            <p id="className">---</p>
-          </div>
-        </div>
-
-        <div class="stats">
-          <div><span>Level</span><b id="level">0</b></div>
-          <div><span>XP</span><b id="xp">0</b></div>
-          <div><span>Gold</span><b id="gold">0</b></div>
-          <div><span>Power</span><b id="power">0</b></div>
-          <div><span>ATK</span><b id="atk">0</b></div>
-          <div><span>DEF</span><b id="def">0</b></div>
-          <div><span>HP</span><b id="hp">0</b></div>
-          <div><span>CRIT</span><b id="crit">0%</b></div>
-        </div>
-      </article>
-
-      <article class="card wide">
-        <div class="row">
-          <h2>Zonas</h2>
-          <span id="zoneStatus" class="zone-status">Inicia sesión para cambiar de zona.</span>
-        </div>
-        <div id="zoneList" class="zone-list"></div>
-      </article>
-
-      <article class="card">
-        <h2>Combate</h2>
-        <p>Zona: <strong id="zone">---</strong></p>
-
-        <label>Enemigo</label>
-        <select id="enemySelect"></select>
-
-        <div class="monsterBox">
-          <div class="monster-stage">
-            <div id="monsterSprite" class="monster"></div>
-            <div id="killPopup" class="kill-popup"></div>
-            <div id="rewardPopup" class="reward-popup"></div>
-          </div>
-          <div class="enemy-info">
-            <h3 id="enemyName">---</h3>
-            <p id="enemyStats">---</p>
-
-            <div class="enemy-hp-row">
-              <span>HP</span>
-              <strong id="enemyHpText">0 / 0</strong>
-            </div>
-            <div class="enemy-hp-bar">
-              <div id="enemyHpFill"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="buttons">
-          <button id="killBtn">Matar enemigo</button>
-          <button id="autoFarmBtn" class="auto">Auto Farm: OFF</button>
-          <button id="offlineBtn" class="secondary">Reclamar offline</button>
-        </div>
-
-        <div class="farm-bar">
-          <div id="farmProgress"></div>
-        </div>
-
-        <p id="combatStatus" class="status">Esperando acción...</p>
-      </article>
-
-      <article class="card">
-        <div class="row">
-          <h2>Upgrades</h2>
-          <span id="upgradeGoldHint" class="gold-hint">Gold: 0</span>
-        </div>
-
-        <div class="upgradeGrid">
-          <button class="upgradeBtn" data-stat="ATK">
-            <span class="upgrade-title">Subir ATK</span>
-            <span class="upgrade-meta">Nivel -- · Coste -- gold</span>
-          </button>
-
-          <button class="upgradeBtn" data-stat="DEF">
-            <span class="upgrade-title">Subir DEF</span>
-            <span class="upgrade-meta">Nivel -- · Coste -- gold</span>
-          </button>
-
-          <button class="upgradeBtn" data-stat="HP">
-            <span class="upgrade-title">Subir HP</span>
-            <span class="upgrade-meta">Nivel -- · Coste -- gold</span>
-          </button>
-
-          <button class="upgradeBtn" data-stat="CRIT">
-            <span class="upgrade-title">Subir CRIT</span>
-            <span class="upgrade-meta">Nivel -- · Coste -- gold</span>
-          </button>
-        </div>
-
-        <p id="upgradeStatus" class="status">Inicia sesión para ver costos.</p>
-      </article>
-
-      <article class="card wide">
-        <div class="row">
-          <h2>Ranking</h2>
-          <button id="leaderboardBtn" class="small">Actualizar</button>
-        </div>
-
-        <table>
-          <thead>
-            <tr>
-              <th>#</th>
-              <th>Nombre</th>
-              <th>Clase</th>
-              <th>Level</th>
-              <th>Power</th>
-              <th>Zona</th>
-            </tr>
-          </thead>
-          <tbody id="leaderboard"></tbody>
-        </table>
-      </article>
-    </section>
-  </main>
-
-  <script src="./app.js"></script>
+  </main><div class="toast" id="toast"></div>
+  <script>
+    const API_BASE="https://crystal-idle-api.onrender.com";
+    const state={token:localStorage.getItem("crystal_idle_token")||"",character:null,zones:[],selectedZoneId:"",enemies:[],autoFarm:false,autoFarmTimer:null,autoFarmStartedAt:0,autoFarmDurationMs:2400,busy:false};
+    const $=id=>document.getElementById(id); const els={authView:$("auth-view"),gameView:$("game-view"),sessionBadge:$("session-badge"),authStatus:$("auth-status"),characterStatus:$("character-status"),combatStatus:$("combat-status"),upgradeStatus:$("upgrade-status"),toast:$("toast"),zoneList:$("zone-list"),enemySelect:$("enemy-select"),rankingBody:$("ranking-body"),btnRefreshTop:$("btn-refresh-top"),btnLogoutTop:$("btn-logout-top"),btnLogin:$("btn-login"),btnRegister:$("btn-register"),btnKill:$("btn-kill"),btnAutoFarm:$("btn-autofarm"),autoFarmBar:$("autofarm-bar"),autoFarmText:$("autofarm-text")};
+    function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]))} function setStatus(el,msg,type=""){if(el){el.className="status "+type;el.textContent=msg||""}} function toast(msg){els.toast.textContent=msg;els.toast.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>els.toast.classList.remove("show"),2600)}
+    async function api(path,options={}){const headers={"Content-Type":"application/json",...(options.headers||{})}; if(state.token)headers.Authorization=`Bearer ${state.token}`; const r=await fetch(`${API_BASE}${path}`,{...options,headers}); const text=await r.text(); let data=null; if(text){try{data=JSON.parse(text)}catch{data={success:false,message:text}}} if(!r.ok)throw new Error(data?.message||`HTTP ${r.status}`); return data}
+    function setToken(token){state.token=token||""; state.token?localStorage.setItem("crystal_idle_token",state.token):localStorage.removeItem("crystal_idle_token"); updateSessionUI()} function updateSessionUI(){if(state.token){els.sessionBadge.textContent="Sesión activa";els.btnRefreshTop.classList.remove("hidden");els.btnLogoutTop.classList.remove("hidden")}else{els.sessionBadge.textContent="Sin sesión";els.btnRefreshTop.classList.add("hidden");els.btnLogoutTop.classList.add("hidden")}}
+    async function login(){setStatus(els.authStatus,"Conectando con el servidor...");try{const res=await api("/auth/login",{method:"POST",body:JSON.stringify({email:$("email").value.trim(),password:$("password").value})}); if(!res.success||!res.token)throw new Error(res.message||"Login inválido"); setToken(res.token); setStatus(els.authStatus,"Sesión iniciada.","success"); await bootGame()}catch(e){setStatus(els.authStatus,`Error: ${e.message}`,"error")}}
+    async function register(){setStatus(els.authStatus,"Creando cuenta...");try{const res=await api("/auth/register",{method:"POST",body:JSON.stringify({email:$("email").value.trim(),password:$("password").value,characterName:$("characterName").value.trim()||"Hero"})}); if(!res.success)throw new Error(res.message||"No se pudo registrar"); if(res.token){setToken(res.token); await bootGame()} setStatus(els.authStatus,res.token?"Cuenta creada y sesión iniciada.":"Cuenta creada. Ahora inicia sesión.","success")}catch(e){setStatus(els.authStatus,`Error: ${e.message}`,"error")}}
+    async function bootGame(){els.authView.classList.add("hidden");els.gameView.classList.remove("hidden");await Promise.allSettled([loadCharacter(),loadZones(),loadRanking()])} function logout(){stopAutoFarm();setToken("");state.character=null;state.zones=[];els.gameView.classList.add("hidden");els.authView.classList.remove("hidden");setStatus(els.authStatus,"Sesión cerrada.")}
+    async function loadCharacter(){setStatus(els.characterStatus,"Cargando héroe...");const res=await api("/character/me");if(!res.success)throw new Error(res.message||"No se pudo cargar personaje");state.character=res.data;renderCharacter();setStatus(els.characterStatus,"Héroe listo para explorar.","success");return state.character}
+    async function loadZones(){const res=await api("/zones"); if(!res.success)throw new Error(res.message||"No se pudieron cargar zonas");state.zones=res.data||[];const cur=getCurrentZone();state.selectedZoneId=cur?.id||state.zones[0]?.id||"";renderZones();selectZone(state.selectedZoneId,false)}
+    function getCurrentZone(){const c=state.character;const id=c?.currentZone?.id||c?.currentZoneId;return state.zones.find(z=>z.id===id)||c?.currentZone||null}
+    function renderCharacter(){const c=state.character;if(!c)return;const zone=c.currentZone?.name||getCurrentZone()?.name||c.currentZoneId||"---";$("hero-name").textContent=c.name||"---";$("hero-class").textContent=c.class||c["@class"]||"---";$("hero-level").textContent=c.level??0;$("hero-xp").textContent=c.xp??0;$("hero-gold").textContent=c.gold??0;$("hero-hp").textContent=`${c.currentHp??c.maxHp??0}/${c.maxHp??0}`;$("hero-atk").textContent=c.atk??0;$("hero-def").textContent=c.def??0;$("hero-crit").textContent=`${((c.critChance??0)*100).toFixed(1)}%`;$("hero-power").textContent=c.power??0;$("hero-zone").textContent=zone;$("hero-zone-pill").textContent=zone;$("current-level-pill").textContent=`Nivel actual: ${c.level??0}`;$("upgrade-gold").textContent=`Gold: ${c.gold??0}`;renderUpgradeCosts()}
+    function renderZones(){const cur=getCurrentZone();const level=state.character?.level||1;els.zoneList.innerHTML=state.zones.map(z=>{const unlocked=level>=z.requiredLevel,current=cur&&z.id===cur.id,enemies=(z.enemies||[]).map(e=>e.name+(e.isBoss?" (Boss)":"")).join(", ");return `<article class="zone-card ${current?"current":""} ${unlocked?"":"locked"}" data-zone-id="${esc(z.id)}"><div class="zone-head"><div class="zone-name">${esc(z.name)}</div><span class="pill ${current?"green":unlocked?"":"red"}">${current?"Actual":unlocked?"Disponible":"Bloqueada"}</span></div><div class="zone-desc">${esc(z.description||"")}</div><div class="small"><strong>Nivel requerido:</strong> ${z.requiredLevel}</div><div class="small"><strong>Enemigos:</strong> ${esc(enemies||"---")}</div><button class="btn ${current?"secondary":"purple"}" ${unlocked&&!current?"":"disabled"} data-zone-action="${esc(z.id)}">${current?"Zona actual":unlocked?"Entrar zona":"Bloqueada"}</button></article>`}).join("");els.zoneList.querySelectorAll("[data-zone-id]").forEach(card=>card.addEventListener("click",ev=>{if(ev.target.matches("button"))return;selectZone(card.dataset.zoneId,true)}));els.zoneList.querySelectorAll("[data-zone-action]").forEach(btn=>btn.addEventListener("click",ev=>{ev.stopPropagation();changeZone(btn.dataset.zoneAction)}))}
+    function selectZone(zoneId,fromUser=true){const zone=state.zones.find(z=>z.id===zoneId)||getCurrentZone();if(!zone)return;state.selectedZoneId=zone.id;state.enemies=zone.enemies||[];const current=getCurrentZone();const isCurrent=current&&current.id===zone.id;$("combat-zone-pill").textContent=isCurrent?`Zona actual: ${zone.name}`:`Preview: ${zone.name}`;setStatus(els.combatStatus,isCurrent?"Selecciona un objetivo y ataca.":"Preview de zona. Entra a la zona para atacar.");renderEnemySelect();renderZones();if(fromUser)toast(`Zona seleccionada: ${zone.name}`)}
+    async function changeZone(zoneId){const zone=state.zones.find(z=>z.id===zoneId);if(!zone)return;try{toast(`Entrando a ${zone.name}...`);const res=await api("/character/change-zone",{method:"POST",body:JSON.stringify({zoneId})});if(!res.success)throw new Error(res.message||"No se pudo cambiar de zona");state.character=res.data;state.selectedZoneId=zoneId;renderCharacter();renderZones();selectZone(zoneId,false);toast(`Entraste a ${zone.name}.`)}catch(e){toast(`Error: ${e.message}`)}}
+    function renderEnemySelect(){els.enemySelect.innerHTML="";if(!state.enemies.length){els.enemySelect.add(new Option("Sin enemigos",""));renderEnemy(null);return}state.enemies.forEach(e=>els.enemySelect.add(new Option(`${e.name}${e.isBoss?" (Boss)":""} | Oro ${e.goldReward} | XP ${e.xpReward}`,e.id)));els.enemySelect.value=state.enemies[0].id;renderEnemy(state.enemies[0])}
+    function renderEnemy(enemy){if(!enemy){$("enemy-name").textContent="---";$("enemy-stats").textContent="---";$("enemy-hp-label").textContent="0 / 0";$("enemy-hp-bar").style.width="0%";$("enemy-reward").textContent="---";return}$("enemy-name").textContent=enemy.name+(enemy.isBoss?" (Boss)":"");$("enemy-stats").textContent=`HP ${enemy.maxHp} | ATK ${enemy.atk} | DEF ${enemy.def}`;$("enemy-hp-label").textContent=`${enemy.maxHp} / ${enemy.maxHp}`;$("enemy-hp-bar").style.width="100%";$("enemy-reward").textContent=`+${enemy.goldReward} oro | +${enemy.xpReward} XP`}
+    function getSelectedEnemy(){return state.enemies.find(e=>e.id===els.enemySelect.value)||state.enemies[0]||null}
+    async function killSelectedEnemy(){if(state.busy)return;const selected=state.zones.find(z=>z.id===state.selectedZoneId),cur=getCurrentZone();if(!selected||!cur||selected.id!==cur.id){toast("Primero entra a esta zona para atacar.");setStatus(els.combatStatus,"No puedes atacar enemigos de una zona donde no estás.","error");return}const enemy=getSelectedEnemy();if(!enemy)return;state.busy=true;els.btnKill.disabled=true;setStatus(els.combatStatus,`Atacando ${enemy.name}...`);try{const res=await api("/combat/kill",{method:"POST",body:JSON.stringify({enemyTypeId:enemy.id})});if(!res.success)throw new Error(res.message||"No se pudo atacar");const result=res.data||{};if(result.character)state.character=result.character;else await loadCharacter();const gold=result.goldEarned??enemy.goldReward??0,xp=result.xpEarned??enemy.xpReward??0;renderCharacter();renderZones();selectZone(state.selectedZoneId,false);setStatus(els.combatStatus,`Victoria: +${gold} oro, +${xp} XP`,"success");toast(`+${gold} oro, +${xp} XP`)}catch(e){setStatus(els.combatStatus,`Error: ${e.message}`,"error")}finally{state.busy=false;els.btnKill.disabled=false}}
+    function renderUpgradeCosts(){const c=state.character||{},gold=c.gold||0;[["atk",c.atk||1],["def",c.def||1],["hp",Math.floor((c.maxHp||100)/10)],["crit",Math.round((c.critChance||0)*100)]].forEach(([stat,level])=>{const cost=getUpgradeCost(stat,level),small=$(`cost-${stat}`);if(small)small.textContent=`Coste aprox: ${cost} oro ${gold>=cost?"· Disponible":"· Falta oro"}`})}function getUpgradeCost(stat,level){const base={atk:40,def:35,hp:45,crit:80}[stat]||50;return Math.max(25,Math.round(base+Math.pow(level,1.35)*4))}
+    async function upgrade(stat){setStatus(els.upgradeStatus,`Intentando mejorar ${stat.toUpperCase()}...`);const attempts=[{path:"/character/upgrade",body:{stat}},{path:"/upgrades/buy",body:{stat}},{path:`/character/upgrade/${stat}`,body:{}},{path:`/upgrades/${stat}`,body:{}}];let last=null;for(const a of attempts){try{const res=await api(a.path,{method:"POST",body:JSON.stringify(a.body)});if(!res.success)throw new Error(res.message||"Upgrade falló");state.character=res.data?.character||res.data||state.character;if(!state.character?.name)await loadCharacter();else renderCharacter();setStatus(els.upgradeStatus,`${stat.toUpperCase()} mejorado correctamente.`,"success");toast(`${stat.toUpperCase()} mejorado.`);return}catch(e){last=e}}setStatus(els.upgradeStatus,`No encontré endpoint compatible para upgrades todavía. Backend respondió: ${last?.message||"sin detalle"}`,"error")}
+    async function loadRanking(){for(const path of ["/leaderboard/power","/leaderboard","/ranking/power"]){try{const res=await api(path);renderRanking(res.data||res.leaderboard||[]);return}catch(e){}}els.rankingBody.innerHTML='<tr><td colspan="6" class="empty">Ranking no disponible todavía.</td></tr>'}
+    function renderRanking(rows){if(!Array.isArray(rows)||!rows.length){els.rankingBody.innerHTML='<tr><td colspan="6" class="empty">Sin datos de ranking.</td></tr>';return}els.rankingBody.innerHTML=rows.slice(0,10).map((r,i)=>`<tr><td>${r.rank||i+1}</td><td>${esc(r.name||"---")}</td><td>${esc(r.class||r["@class"]||"---")}</td><td>${r.level??0}</td><td class="gold-text">${r.power??0}</td><td>${esc(r.currentZone?.name||r.zone||r.currentZoneId||"---")}</td></tr>`).join("")}
+    function startAutoFarm(){if(state.autoFarm)return;state.autoFarm=true;state.autoFarmStartedAt=Date.now();els.btnAutoFarm.textContent="Auto Farm: ON";els.autoFarmText.textContent="Activo";toast("Auto Farm activado.");state.autoFarmTimer=setInterval(async()=>{const pct=Math.min(100,((Date.now()-state.autoFarmStartedAt)/state.autoFarmDurationMs)*100);els.autoFarmBar.style.width=`${pct}%`;if(pct>=100){state.autoFarmStartedAt=Date.now();els.autoFarmBar.style.width="0%";await killSelectedEnemy()}},120)}function stopAutoFarm(){state.autoFarm=false;clearInterval(state.autoFarmTimer);state.autoFarmTimer=null;if(els.btnAutoFarm)els.btnAutoFarm.textContent="Auto Farm: OFF";if(els.autoFarmText)els.autoFarmText.textContent="Apagado";if(els.autoFarmBar)els.autoFarmBar.style.width="0%"}function toggleAutoFarm(){state.autoFarm?(stopAutoFarm(),toast("Auto Farm desactivado.")):startAutoFarm()}
+    els.btnLogin.addEventListener("click",login);els.btnRegister.addEventListener("click",register);els.btnRefreshTop.addEventListener("click",async()=>{await Promise.allSettled([loadCharacter(),loadZones(),loadRanking()]);toast("Datos actualizados.")});els.btnLogoutTop.addEventListener("click",logout);$("btn-ranking").addEventListener("click",loadRanking);els.btnKill.addEventListener("click",killSelectedEnemy);els.btnAutoFarm.addEventListener("click",toggleAutoFarm);els.enemySelect.addEventListener("change",()=>renderEnemy(getSelectedEnemy()));document.querySelectorAll("[data-stat]").forEach(btn=>btn.addEventListener("click",()=>upgrade(btn.dataset.stat)));updateSessionUI();if(state.token){bootGame().catch(e=>{console.error(e);logout();setStatus(els.authStatus,`Sesión expirada o error: ${e.message}`,"error")})}
+  </script>
 </body>
 </html>
