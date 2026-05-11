@@ -104,6 +104,10 @@ button {
   color: #07111f;
 }
 
+button:hover {
+  filter: brightness(1.05);
+}
+
 .secondary {
   background: rgba(255, 255, 255, 0.12);
   color: #eef3ff;
@@ -158,6 +162,15 @@ button {
   background: #22324f;
 }
 
+.monster-stage {
+  position: relative;
+  min-width: 104px;
+  min-height: 92px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .monster {
   width: 84px;
   height: 68px;
@@ -165,6 +178,16 @@ button {
   background: linear-gradient(135deg, #72ff89, #1ab16b);
   box-shadow: 0 0 28px rgba(73, 255, 135, 0.34);
   position: relative;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+
+.monster.hit {
+  transform: translateX(8px) scale(0.96);
+  filter: brightness(1.45);
+}
+
+.monster.dead {
+  animation: monsterDeath 0.35s ease;
 }
 
 .monster::before,
@@ -184,6 +207,87 @@ button {
 
 .monster::after {
   right: 24px;
+}
+
+@keyframes monsterDeath {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.15) rotate(-4deg); opacity: 0.75; }
+  100% { transform: scale(0.85); opacity: 1; }
+}
+
+.damage-popup,
+.reward-popup {
+  position: absolute;
+  pointer-events: none;
+  opacity: 0;
+  font-weight: 900;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
+}
+
+.damage-popup {
+  top: 0;
+  right: -8px;
+  color: #fb7185;
+  font-size: 22px;
+}
+
+.reward-popup {
+  bottom: -10px;
+  left: 8px;
+  color: #facc15;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.damage-popup.show,
+.reward-popup.show {
+  animation: floatUp 0.85s ease forwards;
+}
+
+@keyframes floatUp {
+  0% {
+    transform: translateY(8px);
+    opacity: 0;
+  }
+  15% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-34px);
+    opacity: 0;
+  }
+}
+
+.enemy-info {
+  flex: 1;
+}
+
+.enemy-hp-row {
+  display: flex;
+  justify-content: space-between;
+  color: #dce7ff;
+  font-size: 13px;
+  margin-top: 12px;
+}
+
+.enemy-hp-row span {
+  color: #aebbd4;
+}
+
+.enemy-hp-bar {
+  width: 100%;
+  height: 14px;
+  margin-top: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+#enemyHpFill {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #fb7185, #facc15);
+  transition: width 0.2s ease;
 }
 
 .stats {

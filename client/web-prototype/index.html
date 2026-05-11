@@ -72,10 +72,22 @@
         <select id="enemySelect"></select>
 
         <div class="monsterBox">
-          <div class="monster"></div>
-          <div>
+          <div class="monster-stage">
+            <div id="monsterSprite" class="monster"></div>
+            <div id="damagePopup" class="damage-popup"></div>
+            <div id="rewardPopup" class="reward-popup"></div>
+          </div>
+          <div class="enemy-info">
             <h3 id="enemyName">---</h3>
             <p id="enemyStats">---</p>
+
+            <div class="enemy-hp-row">
+              <span>HP</span>
+              <strong id="enemyHpText">0 / 0</strong>
+            </div>
+            <div class="enemy-hp-bar">
+              <div id="enemyHpFill"></div>
+            </div>
           </div>
         </div>
 

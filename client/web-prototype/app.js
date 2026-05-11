@@ -5,6 +5,7 @@ let character = null;
 let selectedEnemy = null;
 let zones = [];
 
+let enemyCurrentHp = 0;
 let autoFarmEnabled = false;
 let autoFarmInterval = null;
 let autoFarmProgressInterval = null;
@@ -102,19 +103,88 @@ function renderEnemies(enemies) {
     $("enemySelect").value = selectedEnemy.id;
   }
 
+  resetEnemyHp();
   renderEnemy();
+}
+
+function resetEnemyHp() {
+  enemyCurrentHp = selectedEnemy?.maxHp || 0;
+  renderEnemyHp();
+}
+
+function renderEnemyHp() {
+  const maxHp = selectedEnemy?.maxHp || 0;
+  const hp = Math.max(0, Math.min(enemyCurrentHp, maxHp));
+  const percent = maxHp > 0 ? (hp / maxHp) * 100 : 0;
+
+  $("enemyHpText").textContent = `${Math.ceil(hp)} / ${maxHp}`;
+
+  if ($("enemyHpFill")) {
+    $("enemyHpFill").style.width = `${percent}%`;
+  }
 }
 
 function renderEnemy() {
   if (!selectedEnemy) {
     $("enemyName").textContent = "---";
     $("enemyStats").textContent = "---";
+    $("enemyHpText").textContent = "0 / 0";
+    $("enemyHpFill").style.width = "0%";
     return;
   }
 
   $("enemyName").textContent = selectedEnemy.name;
   $("enemyStats").textContent =
     `HP ${selectedEnemy.maxHp} | ATK ${selectedEnemy.atk} | DEF ${selectedEnemy.def} | XP ${selectedEnemy.xpReward} | Gold ${selectedEnemy.goldReward}`;
+
+  renderEnemyHp();
+}
+
+function showDamagePopup(amount) {
+  const popup = $("damagePopup");
+  popup.textContent = `-${amount}`;
+  popup.classList.remove("show");
+  void popup.offsetWidth;
+  popup.classList.add("show");
+
+  const monster = $("monsterSprite");
+  monster.classList.add("hit");
+  setTimeout(() => monster.classList.remove("hit"), 140);
+}
+
+function showRewardPopup(gold, xp) {
+  const popup = $("rewardPopup");
+  popup.textContent = `+${gold} gold  +${xp} XP`;
+  popup.classList.remove("show");
+  void popup.offsetWidth;
+  popup.classList.add("show");
+}
+
+function showDeathAnimation() {
+  const monster = $("monsterSprite");
+  monster.classList.add("dead");
+
+  setTimeout(() => {
+    monster.classList.remove("dead");
+    resetEnemyHp();
+  }, 380);
+}
+
+function simulateAttackVisual() {
+  if (!selectedEnemy) return;
+
+  const visualDamage = Math.max(
+    1,
+    Math.min(selectedEnemy.maxHp, character?.atk || 1)
+  );
+
+  enemyCurrentHp = Math.max(0, enemyCurrentHp - visualDamage);
+  renderEnemyHp();
+  showDamagePopup(visualDamage);
+
+  if (enemyCurrentHp <= 0) {
+    showDeathAnimation();
+  }
 }
 
 async function register() {
@@ -183,7 +253,8 @@ async function killEnemy() {
   }
 
   try {
-    status("combatStatus", `Matando ${selectedEnemy.name}...`);
+    simulateAttackVisual();
+    status("combatStatus", `Atacando ${selectedEnemy.name}...`);
 
     const data = await api("/combat/kill", {
       method: "POST",
@@ -193,6 +264,11 @@ async function killEnemy() {
     });
 
     const r = data.data;
+
+    enemyCurrentHp = 0;
+    renderEnemyHp();
+    showRewardPopup(r.goldEarned, r.xpEarned);
+    showDeathAnimation();
 
     status(
       "combatStatus",
@@ -237,6 +313,14 @@ function startFarmProgress() {
     if ($("farmProgress")) {
       $("farmProgress").style.width = `${farmProgress}%`;
     }
+
+    if (selectedEnemy) {
+      const simulatedHp =
+        selectedEnemy.maxHp -
+        (selectedEnemy.maxHp * farmProgress) / 100;
+      enemyCurrentHp = Math.max(0, simulatedHp);
+      renderEnemyHp();
+    }
   }, 100);
 }
 
@@ -269,6 +353,7 @@ function toggleAutoFarm() {
     clearInterval(autoFarmInterval);
     clearInterval(autoFarmProgressInterval);
     resetFarmProgress();
+    resetEnemyHp();
     status("combatStatus", "Auto Farm detenido.");
   }
 }
@@ -287,6 +372,10 @@ async function claimOffline() {
       "combatStatus",
       `${data.message}. ${r.secondsOffline}s, kills ${r.kills}, +${r.goldEarned} gold, +${r.xpEarned} XP.`
     );
+
+    if (r.goldEarned > 0 || r.xpEarned > 0) {
+      showRewardPopup(r.goldEarned, r.xpEarned);
+    }
 
     renderCharacter(r.character);
     loadLeaderboard();
@@ -359,6 +448,7 @@ $("enemySelect").onchange = () => {
     enemies.find((enemy) => enemy.id === $("enemySelect").value) ||
     null;
 
+  resetEnemyHp();
   renderEnemy();
 };
 
