@@ -35,4 +35,5 @@ public class ZoneData
     public string name;
     public string description;
     public int requiredLevel;
+    public EnemyTypeData[] enemies;
 }
