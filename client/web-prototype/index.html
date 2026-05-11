@@ -3,7 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Crystal Idle Web</title>
+  <title>Crystal Idle Web v4</title>
+  <!-- Crystal Idle Web v4 fixes: upgrades disabled, enemy selection preserved -->
   <style>
     :root {
       --bg:#070b17; --panel:rgba(11,18,36,.9); --panel2:rgba(20,31,59,.92);
@@ -37,7 +38,7 @@
   </style>
 </head>
 <body>
-  <div class="topbar"><div class="topbar-inner"><div class="brand"><div class="logo"></div><div><h1>Crystal Idle</h1><div class="subtitle">Online Idle RPG conectado a tu API</div></div></div><div class="top-actions"><span class="badge">API: <strong>Render</strong></span><span class="badge" id="session-badge">Sin sesión</span><button class="btn secondary hidden" id="btn-refresh-top">Actualizar</button><button class="btn red hidden" id="btn-logout-top">Salir</button></div></div></div>
+  <div class="topbar"><div class="topbar-inner"><div class="brand"><div class="logo"></div><div><h1>Crystal Idle</h1><div class="subtitle">Online Idle RPG conectado a tu API · v4</div></div></div><div class="top-actions"><span class="badge">API: <strong>Render</strong></span><span class="badge" id="session-badge">Sin sesión</span><button class="btn secondary hidden" id="btn-refresh-top">Actualizar</button><button class="btn red hidden" id="btn-logout-top">Salir</button></div></div></div>
   <main class="app">
     <section class="panel auth-card" id="auth-view"><div class="panel-header"><h2 class="panel-title">Cuenta</h2><span class="pill">MVP Web</span></div><div class="panel-body"><div class="field"><label>Email</label><input id="email" type="email" autocomplete="email" value="prodtest@example.com"></div><div class="field"><label>Password</label><input id="password" type="password" autocomplete="current-password" value="123456"></div><div class="field"><label>Nombre del personaje</label><input id="characterName" type="text" value="ProdHero"></div><div class="btn-row"><button class="btn" id="btn-login">Login</button><button class="btn secondary" id="btn-register">Registrar</button></div><div class="status" id="auth-status">Inicia sesión para continuar.</div></div></section>
     <section class="grid hidden" id="game-view">
