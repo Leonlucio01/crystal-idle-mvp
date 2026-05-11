@@ -4,6 +4,7 @@ let token = localStorage.getItem("crystal_idle_token") || "";
 let character = null;
 let selectedEnemy = null;
 let zones = [];
+let recentDrops = [];
 
 let enemyCurrentHp = 0;
 let autoFarmEnabled = false;
@@ -37,6 +38,78 @@ function formatDuration(seconds) {
   if (h > 0) return `${h}h ${m}m ${s}s`;
   if (m > 0) return `${m}m ${s}s`;
   return `${s}s`;
+}
+
+function getCurrentZone() {
+  if (!character) return null;
+  return character.currentZone || zones.find((zone) => zone.id === character.currentZoneId) || null;
+}
+
+function getCurrentEnemies() {
+  const zone = getCurrentZone();
+  return zone?.enemies || [];
+}
+
+function getCurrentBoss() {
+  return getCurrentEnemies().find((enemy) => enemy.isBoss) || null;
+}
+
+function getNormalEnemies(enemies = getCurrentEnemies()) {
+  return enemies.filter((enemy) => !enemy.isBoss);
+}
+
+function getRecommendedPower(enemy) {
+  if (!enemy) return 0;
+  return Math.max(100, Math.floor(enemy.maxHp * 0.45 + enemy.atk * 12 + enemy.def * 18));
+}
+
+function getNextZone() {
+  const currentZone = getCurrentZone();
+  if (!currentZone || !zones.length) return null;
+  const sorted = [...zones].sort((a, b) => a.requiredLevel - b.requiredLevel);
+  const index = sorted.findIndex((zone) => zone.id === currentZone.id);
+  return index >= 0 ? sorted[index + 1] : null;
+}
+
+function normalizeDrop(drop) {
+  if (!drop) return null;
+  return {
+    name: drop.name || "Drop desconocido",
+    rarity: (drop.rarity || "common").toLowerCase(),
+    source: drop.source || "Combate",
+    quantity: drop.quantity || 1,
+  };
+}
+
+function addDrop(drop) {
+  const normalized = normalizeDrop(drop);
+  if (!normalized) return;
+  recentDrops.unshift({ ...normalized, id: `${Date.now()}-${Math.random()}` });
+  recentDrops = recentDrops.slice(0, 10);
+  renderDropFeed();
+  addLog(`Drop encontrado: ${normalized.name} (${normalized.rarity}).`, "success");
+}
+
+function renderDropFeed() {
+  const feed = $("dropFeed");
+  if (!feed) return;
+
+  if (!recentDrops.length) {
+    feed.innerHTML = `<p class="status">Aun no hay drops. Farmea enemigos o desafia jefes.</p>`;
+    return;
+  }
+
+  feed.innerHTML = recentDrops
+    .map((drop) => `
+      <div class="drop-item ${drop.rarity}">
+        <div>
+          <strong>${drop.quantity > 1 ? `${drop.quantity}x ` : ""}${drop.name}</strong>
+          <span>${drop.source}</span>
+        </div>
+        <em class="drop-rarity">${drop.rarity}</em>
+      </div>
+    `)
+    .join("");
 }
 
 function status(id, msg) {
@@ -102,6 +175,11 @@ function getUpgrade(stat) {
   return character?.upgrades?.find((upgrade) => upgrade.stat === stat);
 }
 
+function hasBossKillForZone(zone) {
+  // MVP: el backend valida el jefe con CombatLog. En frontend solo mostramos la meta.
+  return Boolean(zone && character && character.currentZoneId !== zone.id && character.level >= zone.requiredLevel);
+}
+
 function renderZones() {
   const container = $("zoneList");
   if (!container) return;
@@ -139,6 +217,7 @@ function renderZones() {
       <h3>${zone.name}</h3>
       <p>${zone.description || "Zona de combate y farmeo."}</p>
       <p><strong>Enemigos:</strong> ${enemyNames || "Sin enemigos"}</p>
+      <p><strong>Poder recomendado:</strong> ${formatNumber(getRecommendedPower((zone.enemies || []).find((enemy) => enemy.isBoss) || (zone.enemies || [])[0]))}</p>
       <button data-zone-id="${zone.id}" ${!isUnlocked || isCurrent ? "disabled" : ""}>
         ${isCurrent ? "Zona actual" : isUnlocked ? "Entrar" : `Requiere nivel ${zone.requiredLevel}`}
       </button>
@@ -217,6 +296,7 @@ function renderCharacter(c) {
   }
 
   renderEnemies(enemies);
+  renderBossPanel();
   renderUpgradeButtons();
   renderZones();
 }
@@ -226,18 +306,49 @@ function renderEnemies(enemies) {
   const enemySelect = $("enemySelect");
   enemySelect.innerHTML = "";
 
-  enemies.forEach((e) => {
+  const farmEnemies = getNormalEnemies(enemies);
+
+  farmEnemies.forEach((e) => {
     const o = document.createElement("option");
     o.value = e.id;
     o.textContent = `${e.name}${e.isBoss ? " (Boss)" : ""}`;
     enemySelect.appendChild(o);
   });
 
-  selectedEnemy = enemies.find((enemy) => enemy.id === previousEnemyId) || enemies[0] || null;
+  selectedEnemy = farmEnemies.find((enemy) => enemy.id === previousEnemyId) || farmEnemies[0] || null;
   if (selectedEnemy) enemySelect.value = selectedEnemy.id;
 
   resetEnemyHp();
   renderEnemy();
+}
+
+function renderBossPanel() {
+  const boss = getCurrentBoss();
+  const button = $("bossBtn");
+
+  if (!boss || !character) {
+    status("bossName", "---");
+    status("bossStats", "Inicia sesion para ver el jefe de la zona.");
+    status("bossReward", "Derrota jefes para desbloquear nuevas zonas y cofres.");
+    if (button) button.disabled = true;
+    return;
+  }
+
+  const recommendedPower = getRecommendedPower(boss);
+  const nextZone = getNextZone();
+  const power = Number(character.power || 0);
+  const ready = power >= recommendedPower;
+
+  status("bossName", boss.name);
+  status("bossStats", `HP ${formatNumber(boss.maxHp)} | ATK ${formatNumber(boss.atk)} | DEF ${formatNumber(boss.def)} | Poder recomendado ${formatNumber(recommendedPower)}`);
+  status("bossReward", nextZone
+    ? `Victoria: gran recompensa, chance de cofre y progreso hacia ${nextZone.name}.`
+    : "Victoria: gran recompensa, chance de cofre y ranking de poder.");
+
+  if (button) {
+    button.disabled = !ready;
+    button.textContent = ready ? "Desafiar jefe" : `Falta poder: ${formatNumber(recommendedPower - power)}`;
+  }
 }
 
 function resetEnemyHp() {
@@ -401,13 +512,51 @@ async function killEnemy() {
     simulateKillVisual();
     showRewardPopup(r.goldEarned, r.xpEarned);
 
-    status("combatStatus", `${data.message}. +${formatNumber(r.goldEarned)} gold, +${formatNumber(r.xpEarned)} XP.`);
-    addLog(`Derrotaste a ${selectedEnemy.name}: +${formatNumber(r.goldEarned)} oro, +${formatNumber(r.xpEarned)} XP.`, "combat");
+    if (r.drop) addDrop({ ...r.drop, source: selectedEnemy.name });
+
+    const dropText = r.drop ? ` Drop: ${r.drop.name}.` : "";
+    status("combatStatus", `${data.message}. +${formatNumber(r.goldEarned)} gold, +${formatNumber(r.xpEarned)} XP.${dropText}`);
+    addLog(`Derrotaste a ${selectedEnemy.name}: +${formatNumber(r.goldEarned)} oro, +${formatNumber(r.xpEarned)} XP.${dropText}`, "combat");
     await loadCharacter();
     loadLeaderboard();
   } catch (e) {
     status("combatStatus", `Error: ${e.message}`);
     addLog(`Error en combate: ${e.message}`, "error");
+  }
+}
+
+
+async function challengeBoss() {
+  const boss = getCurrentBoss();
+  if (!boss) return status("combatStatus", "No hay jefe en la zona actual.");
+
+  try {
+    if (autoFarmEnabled) toggleAutoFarm();
+    status("combatStatus", `Desafiando a ${boss.name}...`);
+
+    const data = await api("/combat/challenge-boss", {
+      method: "POST",
+      body: JSON.stringify({ enemyTypeId: boss.id }),
+    });
+
+    const r = data.data;
+    enemyCurrentHp = 0;
+    renderEnemyHp();
+    showKillPopup();
+    showRewardPopup(r.goldEarned, r.xpEarned);
+
+    if (r.drop) addDrop({ ...r.drop, source: boss.name });
+
+    const unlockText = r.nextZone ? ` Proxima meta: ${r.nextZone.name}.` : " Has conquistado la ultima zona disponible.";
+    const dropText = r.drop ? ` Drop: ${r.drop.name}.` : "";
+    status("combatStatus", `Jefe derrotado: +${formatNumber(r.goldEarned)} gold, +${formatNumber(r.xpEarned)} XP.${dropText}${unlockText}`);
+    addLog(`Jefe ${boss.name} derrotado.${dropText}${unlockText}`, "success");
+
+    await loadCharacter();
+    loadLeaderboard();
+  } catch (e) {
+    status("combatStatus", `Error: ${e.message}`);
+    addLog(`El jefe resistio: ${e.message}`, "error");
   }
 }
 
@@ -478,6 +627,21 @@ function showOfflineModal(reward) {
   status("offlineKills", formatNumber(reward.kills));
   status("offlineGold", formatNumber(reward.goldEarned));
   status("offlineXp", formatNumber(reward.xpEarned));
+
+  const drops = reward.drops || [];
+  const offlineDrops = $("offlineDrops");
+  if (offlineDrops) {
+    offlineDrops.innerHTML = drops.length
+      ? drops.map((drop) => `
+        <div class="drop-item ${String(drop.rarity || "common").toLowerCase()}">
+          <div><strong>${drop.quantity || 1}x ${drop.name}</strong><span>Recompensa offline</span></div>
+          <em class="drop-rarity">${drop.rarity || "common"}</em>
+        </div>
+      `).join("")
+      : `<p class="status">Sin drops esta vez. Sigue farmeando para conseguir cofres y materiales.</p>`;
+  }
+
+  drops.forEach((drop) => addDrop({ ...drop, source: "Offline" }));
   $("offlineModal").classList.remove("hidden");
 }
 
@@ -488,8 +652,9 @@ async function claimOffline() {
     const data = await api("/idle/claim-offline", { method: "POST" });
     const r = data.data;
 
-    status("combatStatus", `${data.message}. ${formatDuration(r.secondsOffline)}, kills ${formatNumber(r.kills)}, +${formatNumber(r.goldEarned)} gold, +${formatNumber(r.xpEarned)} XP.`);
-    addLog(`Offline reclamado: ${formatDuration(r.secondsOffline)}, ${formatNumber(r.kills)} kills, +${formatNumber(r.goldEarned)} oro, +${formatNumber(r.xpEarned)} XP.`, "success");
+    const dropsText = r.drops?.length ? `, ${r.drops.length} drops` : "";
+    status("combatStatus", `${data.message}. ${formatDuration(r.secondsOffline)}, kills ${formatNumber(r.kills)}, +${formatNumber(r.goldEarned)} gold, +${formatNumber(r.xpEarned)} XP${dropsText}.`);
+    addLog(`Offline reclamado: ${formatDuration(r.secondsOffline)}, ${formatNumber(r.kills)} kills, +${formatNumber(r.goldEarned)} oro, +${formatNumber(r.xpEarned)} XP${dropsText}.`, "success");
 
     if (r.goldEarned > 0 || r.xpEarned > 0) {
       showRewardPopup(r.goldEarned, r.xpEarned);
@@ -565,6 +730,7 @@ $("killBtn").onclick = killEnemy;
 $("autoFarmBtn").onclick = toggleAutoFarm;
 $("offlineBtn").onclick = claimOffline;
 $("leaderboardBtn").onclick = loadLeaderboard;
+$("bossBtn").onclick = challengeBoss;
 $("closeOfflineModal").onclick = () => $("offlineModal").classList.add("hidden");
 $("offlineModal").onclick = (event) => {
   if (event.target.id === "offlineModal") $("offlineModal").classList.add("hidden");
@@ -575,11 +741,12 @@ document.querySelectorAll(".upgradeBtn").forEach((button) => {
 });
 
 $("enemySelect").onchange = () => {
-  const enemies =
+  const enemies = getNormalEnemies(
     character?.currentZone?.enemies ||
     zones.find((zone) => zone.id === character?.currentZoneId)?.enemies ||
     zones.find((zone) => zone.id === character?.currentZone?.id)?.enemies ||
-    [];
+    []
+  );
 
   selectedEnemy = enemies.find((enemy) => enemy.id === $("enemySelect").value) || null;
   resetEnemyHp();
@@ -601,5 +768,7 @@ $("enemySelect").onchange = () => {
     renderZones();
   }
 
+  renderDropFeed();
+  renderBossPanel();
   updateFarmButton();
 })();

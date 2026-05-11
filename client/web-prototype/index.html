@@ -130,6 +130,16 @@
             </div>
 
             <p id="combatStatus" class="status big-status">Esperando acción...</p>
+
+            <div id="bossPanel" class="boss-panel">
+              <div>
+                <p class="eyebrow">Jefe de zona</p>
+                <h3 id="bossName">---</h3>
+                <p id="bossStats" class="boss-stats">Inicia sesión para ver el jefe.</p>
+                <p id="bossReward" class="boss-reward">Derrota al jefe para desbloquear progreso.</p>
+              </div>
+              <button id="bossBtn" class="boss-button">Desafiar jefe</button>
+            </div>
           </section>
 
           <section class="panel activity-panel">
@@ -181,6 +191,22 @@
             <p id="upgradeStatus" class="status">Inicia sesión para ver costos.</p>
           </article>
 
+          <article class="panel drops-panel">
+            <div class="panel-title rowed">
+              <div class="panel-title compact">
+                <span class="icon-dot drop-dot"></span>
+                <div>
+                  <p class="eyebrow">Loot</p>
+                  <h2>Drops recientes</h2>
+                </div>
+              </div>
+              <span class="pill">MVP visual</span>
+            </div>
+            <div id="dropFeed" class="drop-feed">
+              <p class="status">Aun no hay drops. Farmea enemigos o desafia jefes.</p>
+            </div>
+          </article>
+
           <article class="panel leaderboard-panel">
             <div class="panel-title rowed">
               <div class="panel-title compact">
@@ -224,6 +250,7 @@
         <div><span>Oro</span><strong id="offlineGold">0</strong></div>
         <div><span>XP</span><strong id="offlineXp">0</strong></div>
       </div>
+      <div id="offlineDrops" class="offline-drops"></div>
       <button id="closeOfflineModal" class="primary">Continuar</button>
     </div>
   </div>

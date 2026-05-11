@@ -19,6 +19,29 @@ function calculatePower(character) {
   );
 }
 
+function rollOfflineDrops(enemy, kills) {
+  if (!enemy || kills <= 0) return [];
+
+  const drops = [];
+  const commonQty = Math.floor(kills / 35);
+  const rareQty = Math.floor(kills / 180);
+  const epicQty = Math.floor(kills / 900);
+
+  if (commonQty > 0) {
+    drops.push({ name: "Crystal Fragment", rarity: "common", quantity: Math.min(commonQty, 99) });
+  }
+
+  if (rareQty > 0) {
+    drops.push({ name: `${enemy.name} Rare Cache`, rarity: "rare", quantity: Math.min(rareQty, 20) });
+  }
+
+  if (epicQty > 0) {
+    drops.push({ name: "Epic Offline Chest", rarity: "epic", quantity: Math.min(epicQty, 5) });
+  }
+
+  return drops;
+}
+
 function applyXp(character, xpEarned) {
   let newLevel = character.level;
   let newXp = character.xp + xpEarned;
@@ -115,6 +138,7 @@ router.post("/claim-offline", authMiddleware, async (req, res) => {
 
     const goldEarned = kills * enemy.goldReward;
     const xpEarned = kills * enemy.xpReward;
+    const drops = rollOfflineDrops(enemy, kills);
 
     const xpResult = applyXp(character, xpEarned);
 
@@ -181,6 +205,7 @@ router.post("/claim-offline", authMiddleware, async (req, res) => {
         kills,
         goldEarned,
         xpEarned,
+        drops,
         levelsGained: xpResult.levelsGained,
         character: result.character,
         offlineReward: result.offlineReward,

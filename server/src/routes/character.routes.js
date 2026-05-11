@@ -223,6 +223,38 @@ router.post("/change-zone", authMiddleware, async (req, res) => {
       });
     }
 
+    const orderedZones = await prisma.zone.findMany({
+      orderBy: {
+        requiredLevel: "asc",
+      },
+      include: {
+        enemies: true,
+      },
+    });
+
+    const targetIndex = orderedZones.findIndex((item) => item.id === zone.id);
+    const previousZone = targetIndex > 0 ? orderedZones[targetIndex - 1] : null;
+    const previousBoss = previousZone?.enemies.find((enemy) => enemy.isBoss);
+
+    if (previousBoss && character.currentZoneId !== zone.id) {
+      const previousBossKills = await prisma.combatLog.count({
+        where: {
+          characterId: character.id,
+          enemyTypeId: previousBoss.id,
+          enemyKilled: true,
+        },
+      });
+
+      if (previousBossKills === 0) {
+        return res.status(403).json({
+          success: false,
+          message: `Defeat ${previousBoss.name} in ${previousZone.name} before entering ${zone.name}`,
+          requiredBoss: previousBoss.name,
+          requiredZone: previousZone.name,
+        });
+      }
+    }
+
     const updatedCharacter = await prisma.character.update({
       where: {
         id: character.id,
