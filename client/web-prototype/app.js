@@ -13,8 +13,9 @@ let recentDrops = [];
 
 let enemyCurrentHp = 0;
 let autoFarmEnabled = false;
-let autoFarmInterval = null;
+let autoFarmTimeout = null;
 let autoFarmProgressInterval = null;
+let combatRequestInFlight = false;
 let farmProgress = 0;
 const AUTO_FARM_SECONDS = 2;
 
@@ -138,6 +139,42 @@ function itemTypeLabel(item) {
   return map[item.type] || item.type || "Item";
 }
 
+function normalizeInventoryItem(entry) {
+  if (!entry) return null;
+  const item = entry.itemDefinition || entry;
+  return {
+    id: entry.id,
+    itemDefinitionId: item.id || entry.itemDefinitionId,
+    name: item.name || entry.name || "Item",
+    type: item.type || entry.type || null,
+    rarity: item.rarity || entry.rarity || "COMMON",
+    slot: item.slot || entry.slot || null,
+    equippedSlot: entry.equippedSlot || null,
+    quantity: entry.quantity || 1,
+    atk: entry.atk ?? item.atk ?? 0,
+    def: entry.def ?? item.def ?? 0,
+    maxHp: entry.maxHp ?? item.maxHp ?? 0,
+    critChance: entry.critChance ?? item.critChance ?? 0,
+    goldBonus: entry.goldBonus ?? item.goldBonus ?? 0,
+    xpBonus: entry.xpBonus ?? item.xpBonus ?? 0,
+    autoFarmSpeed: entry.autoFarmSpeed ?? item.autoFarmSpeed ?? 0,
+  };
+}
+
+function syncInventoryFromCharacter(c) {
+  if (!Array.isArray(c?.inventory)) return false;
+  inventoryItems = c.inventory.map(normalizeInventoryItem).filter(Boolean);
+  equippedItems = inventoryItems.filter((item) => item.equippedSlot);
+  renderInventory();
+  return true;
+}
+
+function applyCharacterUpdate(c) {
+  if (!c) return;
+  renderCharacter(c);
+  syncInventoryFromCharacter(c);
+}
+
 function slotLabel(slot) {
   const map = { WEAPON: "Arma", ARMOR: "Armadura", HELMET: "Casco", BOOTS: "Botas", AMULET: "Amuleto" };
   return map[slot] || slot || "Slot";
@@ -250,8 +287,8 @@ async function loadInventory() {
 
   try {
     const data = await api("/inventory");
-    inventoryItems = data.data?.items || [];
-    equippedItems = data.data?.equipped || [];
+    inventoryItems = (data.data?.items || []).map(normalizeInventoryItem).filter(Boolean);
+    equippedItems = (data.data?.equipped || []).map(normalizeInventoryItem).filter(Boolean);
     renderInventory();
   } catch (e) {
     status("inventoryStatus", `Error: ${e.message}`);
@@ -617,7 +654,7 @@ async function loadCharacter() {
 
   try {
     const data = await api("/character/me");
-    renderCharacter(data.data);
+    applyCharacterUpdate(data.data);
   } catch (e) {
     status("authStatus", `Error: ${e.message}`);
     addLog(`Error cargando personaje: ${e.message}`, "error");
@@ -638,8 +675,7 @@ async function changeZone(zoneId) {
 
     status("zoneStatus", data.message);
     addLog(data.message || "Zona cambiada.", "success");
-    renderCharacter(data.data);
-    await loadInventory();
+    applyCharacterUpdate(data.data);
     loadLeaderboard();
   } catch (e) {
     status("zoneStatus", `Error: ${e.message}`);
@@ -647,35 +683,52 @@ async function changeZone(zoneId) {
   }
 }
 
-async function killEnemy() {
+async function killEnemy(options = {}) {
   if (!selectedEnemy) return status("combatStatus", "No hay enemigo seleccionado.");
+  if (combatRequestInFlight) return;
+
+  const fromAutoFarm = Boolean(options.fromAutoFarm);
+  combatRequestInFlight = true;
 
   try {
-    status("combatStatus", `Peleando contra ${selectedEnemy.name}...`);
+    if (!fromAutoFarm) status("combatStatus", `Atacando a ${selectedEnemy.name}...`);
 
-    const data = await api("/combat/attack", {
+    // Animacion inmediata para que el boton se sienta mas rapido.
+    simulateKillVisual();
+
+    // Para el gameplay idle actual, /combat/kill es el endpoint correcto:
+    // entrega oro, XP y drops. /combat/attack solo representa un golpe y puede dar 0 XP si no mata.
+    const data = await api("/combat/kill", {
       method: "POST",
       body: JSON.stringify({ enemyTypeId: selectedEnemy.id }),
     });
 
     const r = data.data;
-    simulateKillVisual();
     showRewardPopup(r.goldEarned, r.xpEarned);
 
-    addDrops(r.drops || (r.drop ? [r.drop] : []), selectedEnemy.name);
+    const drops = r.drops || (r.drop ? [r.drop] : []);
+    addDrops(drops, selectedEnemy.name);
 
-    const dropText = r.drops?.length ? ` Drops: ${r.drops.map((drop) => `${drop.quantity || 1}x ${drop.name}`).join(", ")}.` : r.drop ? ` Drop: ${r.drop.name}.` : "";
+    const dropText = drops.length ? ` Drops: ${drops.map((drop) => `${drop.quantity || 1}x ${drop.name}`).join(", ")}.` : "";
     status("combatStatus", `${data.message}. +${formatNumber(r.goldEarned)} gold, +${formatNumber(r.xpEarned)} XP.${dropText}`);
     addLog(`Derrotaste a ${selectedEnemy.name}: +${formatNumber(r.goldEarned)} oro, +${formatNumber(r.xpEarned)} XP.${dropText}`, "combat");
-    await loadCharacter();
-    await loadInventory();
-    loadLeaderboard();
+
+    applyCharacterUpdate(r.character);
+
+    // Solo pedimos inventario extra si hubo drops y el character devuelto no traia inventario completo.
+    if (drops.length && !Array.isArray(r.character?.inventory)) {
+      await loadInventory();
+    }
+
+    // El ranking no se refresca en cada golpe para evitar sensacion lenta.
+    if (!fromAutoFarm && r.levelsGained > 0) loadLeaderboard();
   } catch (e) {
     status("combatStatus", `Error: ${e.message}`);
     addLog(`Error en combate: ${e.message}`, "error");
+  } finally {
+    combatRequestInFlight = false;
   }
 }
-
 
 async function challengeBoss() {
   const boss = getCurrentBoss();
@@ -704,8 +757,7 @@ async function challengeBoss() {
     status("combatStatus", `Jefe derrotado: +${formatNumber(r.goldEarned)} gold, +${formatNumber(r.xpEarned)} XP.${dropText}${unlockText}`);
     addLog(`Jefe ${boss.name} derrotado.${dropText}${unlockText}`, "success");
 
-    await loadCharacter();
-    await loadInventory();
+    applyCharacterUpdate(r.character);
     await loadZones();
     loadLeaderboard();
   } catch (e) {
@@ -727,12 +779,12 @@ function resetFarmProgress() {
   status("farmTimerText", "0%");
 }
 
-function startFarmProgress() {
+function startFarmProgress(durationMs = AUTO_FARM_SECONDS * 1000) {
   resetFarmProgress();
   clearInterval(autoFarmProgressInterval);
 
   autoFarmProgressInterval = setInterval(() => {
-    farmProgress += 100 / (AUTO_FARM_SECONDS * 10);
+    farmProgress += 100 / Math.max(1, durationMs / 100);
     if (farmProgress > 100) farmProgress = 100;
     $("farmProgress").style.width = `${farmProgress}%`;
     status("farmTimerText", `${Math.round(farmProgress)}%`);
@@ -745,16 +797,33 @@ function startFarmProgress() {
   }, 100);
 }
 
-async function autoFarmTick() {
+function getAutoFarmDelayMs() {
+  const speedBonus = Number(character?.autoFarmSpeed || 0);
+  const equippedSpeed = inventoryItems
+    .filter((item) => item.equippedSlot)
+    .reduce((sum, item) => sum + Number(item.autoFarmSpeed || 0), 0);
+  const multiplier = Math.max(0.35, 1 - speedBonus - equippedSpeed);
+  return Math.max(650, Math.round(AUTO_FARM_SECONDS * 1000 * multiplier));
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function autoFarmLoop() {
   if (!autoFarmEnabled) return;
 
-  startFarmProgress();
+  const delayMs = getAutoFarmDelayMs();
+  startFarmProgress(delayMs);
+  await sleep(delayMs);
 
-  setTimeout(async () => {
-    if (!autoFarmEnabled) return;
-    await killEnemy();
-    resetFarmProgress();
-  }, AUTO_FARM_SECONDS * 1000);
+  if (!autoFarmEnabled) return;
+  await killEnemy({ fromAutoFarm: true });
+  resetFarmProgress();
+
+  if (autoFarmEnabled) {
+    autoFarmTimeout = setTimeout(autoFarmLoop, 150);
+  }
 }
 
 function toggleAutoFarm() {
@@ -764,10 +833,10 @@ function toggleAutoFarm() {
   if (autoFarmEnabled) {
     status("combatStatus", "Auto Farm iniciado...");
     addLog("Auto Farm iniciado.", "success");
-    autoFarmTick();
-    autoFarmInterval = setInterval(() => autoFarmTick(), AUTO_FARM_SECONDS * 1000);
+    clearTimeout(autoFarmTimeout);
+    autoFarmLoop();
   } else {
-    clearInterval(autoFarmInterval);
+    clearTimeout(autoFarmTimeout);
     clearInterval(autoFarmProgressInterval);
     resetFarmProgress();
     resetEnemyHp();
@@ -867,8 +936,8 @@ async function equipItem(inventoryItemId) {
     });
     status("inventoryStatus", data.message || "Item equipado.");
     addLog(data.message || "Item equipado.", "success");
-    if (data.data?.character) renderCharacter(data.data.character);
-    await loadInventory();
+    if (data.data?.character) applyCharacterUpdate(data.data.character);
+    else await loadInventory();
     loadLeaderboard();
   } catch (e) {
     status("inventoryStatus", `Error: ${e.message}`);
@@ -886,8 +955,8 @@ async function sellItem(inventoryItemId) {
     });
     status("inventoryStatus", data.message || "Item vendido.");
     addLog(data.message || "Item vendido.", "success");
-    if (data.data?.character) renderCharacter(data.data.character);
-    await loadInventory();
+    if (data.data?.character) applyCharacterUpdate(data.data.character);
+    else await loadInventory();
     loadLeaderboard();
   } catch (e) {
     status("inventoryStatus", `Error: ${e.message}`);
