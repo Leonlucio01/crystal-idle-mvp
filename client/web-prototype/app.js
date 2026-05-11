@@ -232,9 +232,9 @@ function renderEnemy() {
   renderEnemyHp();
 }
 
-function showDamagePopup(amount) {
-  const popup = $("damagePopup");
-  popup.textContent = `-${amount}`;
+function showKillPopup() {
+  const popup = $("killPopup");
+  popup.textContent = "KILL";
   popup.classList.remove("show");
   void popup.offsetWidth;
   popup.classList.add("show");
@@ -261,13 +261,12 @@ function showDeathAnimation() {
   }, 380);
 }
 
-function simulateAttackVisual() {
+function simulateKillVisual() {
   if (!selectedEnemy) return;
-  const visualDamage = Math.max(1, Math.min(selectedEnemy.maxHp, character?.atk || 1));
-  enemyCurrentHp = Math.max(0, enemyCurrentHp - visualDamage);
+  enemyCurrentHp = 0;
   renderEnemyHp();
-  showDamagePopup(visualDamage);
-  if (enemyCurrentHp <= 0) showDeathAnimation();
+  showKillPopup();
+  showDeathAnimation();
 }
 
 async function register() {
@@ -353,8 +352,7 @@ async function killEnemy() {
   if (!selectedEnemy) return status("combatStatus", "No hay enemigo seleccionado.");
 
   try {
-    simulateAttackVisual();
-    status("combatStatus", `Atacando ${selectedEnemy.name}...`);
+    status("combatStatus", `Peleando contra ${selectedEnemy.name}...`);
 
     const data = await api("/combat/kill", {
       method: "POST",
@@ -362,10 +360,9 @@ async function killEnemy() {
     });
 
     const r = data.data;
-    enemyCurrentHp = 0;
-    renderEnemyHp();
+
+    simulateKillVisual();
     showRewardPopup(r.goldEarned, r.xpEarned);
-    showDeathAnimation();
 
     status("combatStatus", `${data.message}. +${r.goldEarned} gold, +${r.xpEarned} XP.`);
     await loadCharacter();

@@ -1,38 +1,24 @@
-# Client Web Prototype - Zone Selector
+# Client Web Prototype - Kill Visual
 
-Versión del cliente web con selector visual de zonas.
+Esta versión cambia el popup visual de daño numérico (`-68`) por `KILL`.
+
+## Por qué
+
+El endpoint usado actualmente es:
+
+```txt
+POST /combat/kill
+```
+
+Ese endpoint representa una pelea completa y mata el enemigo en una llamada.  
+Por eso era confuso mostrar daño parcial. Ahora el cliente muestra `KILL`.
 
 ## Incluye
 
-- Registro/login
-- Personaje
-- Combate
+- Selector de zonas
 - Auto Farm
-- Offline rewards
-- Upgrades con costo
+- Barra de vida de enemigo
+- Popup `KILL`
+- Recompensas flotantes
+- Upgrades con costos
 - Ranking
-- Panel de zonas
-- Zonas bloqueadas por nivel
-- Cambio de zona usando `POST /character/change-zone`
-
-## Uso
-
-Copia estos archivos en:
-
-```txt
-crystal-idle-mvp/client/web-prototype/
-```
-
-Luego abre `index.html`.
-
-Si quieres servirlo localmente:
-
-```bash
-python -m http.server 5173
-```
-
-y abre:
-
-```txt
-http://localhost:5173
-```
