@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Crystal Idle Web v5</title>
-  <!-- Crystal Idle Web v5 fixes: upgrades disabled, enemy selection preserved -->
+  <title>Crystal Idle Web v6</title>
+  <!-- Crystal Idle Web v6 fixes: upgrades disabled, enemy selection preserved -->
   <style>
     :root {
       --bg:#070b17; --panel:rgba(11,18,36,.9); --panel2:rgba(20,31,59,.92);
@@ -38,7 +38,7 @@
   </style>
 </head>
 <body>
-  <div class="topbar"><div class="topbar-inner"><div class="brand"><div class="logo"></div><div><h1>Crystal Idle</h1><div class="subtitle">Online Idle RPG conectado a tu API · v5</div></div></div><div class="top-actions"><span class="badge">API: <strong>Render</strong></span><span class="badge" id="session-badge">Sin sesión</span><button class="btn secondary hidden" id="btn-refresh-top">Actualizar</button><button class="btn red hidden" id="btn-logout-top">Salir</button></div></div></div>
+  <div class="topbar"><div class="topbar-inner"><div class="brand"><div class="logo"></div><div><h1>Crystal Idle</h1><div class="subtitle">Online Idle RPG conectado a tu API · v6</div></div></div><div class="top-actions"><span class="badge">API: <strong>Render</strong></span><span class="badge" id="session-badge">Sin sesión</span><button class="btn secondary hidden" id="btn-refresh-top">Actualizar</button><button class="btn red hidden" id="btn-logout-top">Salir</button></div></div></div>
   <main class="app">
     <section class="panel auth-card" id="auth-view"><div class="panel-header"><h2 class="panel-title">Cuenta</h2><span class="pill">MVP Web</span></div><div class="panel-body"><div class="field"><label>Email</label><input id="email" type="email" autocomplete="email" value="prodtest@example.com"></div><div class="field"><label>Password</label><input id="password" type="password" autocomplete="current-password" value="123456"></div><div class="field"><label>Nombre del personaje</label><input id="characterName" type="text" value="ProdHero"></div><div class="btn-row"><button class="btn" id="btn-login">Login</button><button class="btn secondary" id="btn-register">Registrar</button></div><div class="status" id="auth-status">Inicia sesión para continuar.</div></div></section>
     <section class="grid hidden" id="game-view">
@@ -46,7 +46,7 @@
       <section class="right-grid">
         <div class="panel span-2"><div class="panel-header"><h2 class="panel-title">Zonas</h2><span class="pill" id="current-level-pill">Nivel actual</span></div><div class="panel-body"><div class="zone-list" id="zone-list"></div></div></div>
         <div class="panel"><div class="panel-header"><h2 class="panel-title">Combate</h2><span class="pill green" id="combat-zone-pill">Zona actual</span></div><div class="panel-body"><div class="field"><label>Enemigo</label><select id="enemy-select"></select></div><div class="combat-layout"><div class="enemy-art"></div><div><div class="purple-text" style="font-size:24px" id="enemy-name">---</div><div class="small" id="enemy-stats">---</div><div class="hp-wrap"><div class="hp-label"><span>HP</span><span id="enemy-hp-label">0 / 0</span></div><div class="bar"><span id="enemy-hp-bar"></span></div></div><div class="reward" id="enemy-reward">---</div><button class="btn gold" id="btn-kill">Atacar</button></div></div><div class="autofarm"><div><strong>Auto Farm</strong><div class="small" id="autofarm-text">Apagado</div></div><button class="btn green" id="btn-autofarm">Auto Farm: OFF</button></div><div class="progress-tick"><span id="autofarm-bar"></span></div><div class="status" id="combat-status">Selecciona un enemigo para atacar.</div></div></div>
-        <div class="panel"><div class="panel-header"><h2 class="panel-title">Upgrades</h2><span class="pill gold" id="upgrade-gold">Gold: 0</span></div><div class="panel-body"><div class="upgrade-grid"><button class="upgrade-card" data-stat="atk">Subir ATK<small id="cost-atk">Cargando...</small></button><button class="upgrade-card" data-stat="def">Subir DEF<small id="cost-def">Cargando...</small></button><button class="upgrade-card" data-stat="hp">Subir HP<small id="cost-hp">Cargando...</small></button><button class="upgrade-card" data-stat="crit">Subir CRIT<small id="cost-crit">Cargando...</small></button></div><div class="status" id="upgrade-status">Upgrades listos visualmente. Backend pendiente de conectar.</div></div></div>
+        <div class="panel"><div class="panel-header"><h2 class="panel-title">Upgrades</h2><span class="pill gold" id="upgrade-gold">Gold: 0</span></div><div class="panel-body"><div class="upgrade-grid"><button class="upgrade-card" data-stat="atk">Subir ATK<small id="cost-atk">Cargando...</small></button><button class="upgrade-card" data-stat="def">Subir DEF<small id="cost-def">Cargando...</small></button><button class="upgrade-card" data-stat="hp">Subir HP<small id="cost-hp">Cargando...</small></button><button class="upgrade-card" data-stat="crit">Subir CRIT<small id="cost-crit">Cargando...</small></button></div><div class="status" id="upgrade-status">Upgrades visuales listos. Falta crear el endpoint en Node/Express.</div></div></div>
         <div class="panel span-2"><div class="panel-header"><h2 class="panel-title">Ranking de poder</h2><button class="btn secondary" id="btn-ranking">Actualizar ranking</button></div><div class="panel-body"><table class="ranking-table"><thead><tr><th>#</th><th>Nombre</th><th>Clase</th><th>Nivel</th><th>Poder</th><th>Zona</th></tr></thead><tbody id="ranking-body"><tr><td colspan="6" class="empty">Cargando ranking...</td></tr></tbody></table></div></div>
       </section>
     </section>
