@@ -20,6 +20,11 @@ public class GameSceneLayout : MonoBehaviour
     public RectTransform zoneText;
     public RectTransform statusText;
 
+    [Header("Zone")]
+    public RectTransform zoneDropdown;
+    public RectTransform changeZoneButton;
+    public RectTransform zoneStatusText;
+
     [Header("Combat")]
     public RectTransform enemyDropdown;
     public RectTransform killEnemyButton;
@@ -49,6 +54,10 @@ public class GameSceneLayout : MonoBehaviour
         powerText = FindRect(root, "PowerText");
         zoneText = FindRect(root, "ZoneText");
         statusText = FindRect(root, "StatusText");
+
+        zoneDropdown = FindRect(root, "ZoneDropdown");
+        changeZoneButton = FindRect(root, "ChangeZoneButton");
+        zoneStatusText = FindRect(root, "ZoneStatusText");
 
         enemyDropdown = FindRect(root, "EnemyDropdown");
         killEnemyButton = FindRect(root, "KillEnemyButton");
@@ -80,9 +89,13 @@ public class GameSceneLayout : MonoBehaviour
         SetText(zoneText, -285, -98, 330, 26, 19);
         SetText(statusText, -285, -142, 330, 36, 18);
 
-        SetRect(enemyDropdown, 220, 95, 330, 38);
-        SetRect(killEnemyButton, 220, 40, 210, 42);
-        SetText(combatStatusText, 220, -20, 330, 70, 18);
+        SetRect(zoneDropdown, 220, 160, 330, 38);
+        SetRect(changeZoneButton, 220, 110, 210, 42);
+        SetText(zoneStatusText, 220, 68, 330, 36, 16);
+
+        SetRect(enemyDropdown, 220, 20, 330, 38);
+        SetRect(killEnemyButton, 220, -30, 210, 42);
+        SetText(combatStatusText, 220, -88, 330, 70, 18);
 
         SetRect(refreshButton, -285, -220, 165, 40);
         SetRect(logoutButton, -105, -220, 165, 40);
@@ -90,10 +103,12 @@ public class GameSceneLayout : MonoBehaviour
         SetButtonText(refreshButton, "Refresh", 19);
         SetButtonText(logoutButton, "Logout", 19);
         SetButtonText(killEnemyButton, "Matar enemigo", 18);
+        SetButtonText(changeZoneButton, "Entrar zona", 18);
 
         StyleButton(refreshButton);
         StyleButton(logoutButton);
         StyleButton(killEnemyButton);
+        StyleButton(changeZoneButton);
     }
 
     private void SetupPanel(RectTransform rect)

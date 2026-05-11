@@ -20,6 +20,11 @@ public class GameUI : MonoBehaviour
     public TMP_Text zoneText;
     public TMP_Text statusText;
 
+    [Header("Zone UI")]
+    public TMP_Dropdown zoneDropdown;
+    public Button changeZoneButton;
+    public TMP_Text zoneStatusText;
+
     [Header("Combat UI")]
     public TMP_Dropdown enemyDropdown;
     public Button killEnemyButton;
@@ -30,10 +35,16 @@ public class GameUI : MonoBehaviour
     public Button logoutButton;
 
     private CharacterData currentCharacter;
+    private readonly List<ZoneData> allZones = new List<ZoneData>();
     private readonly List<EnemyTypeData> currentEnemies = new List<EnemyTypeData>();
 
     private string currentZoneName = "";
     private string currentZoneId = "";
+
+    private void Awake()
+    {
+        AutoWireIfNeeded();
+    }
 
     private void Start()
     {
@@ -46,7 +57,38 @@ public class GameUI : MonoBehaviour
         if (killEnemyButton != null)
             killEnemyButton.onClick.AddListener(KillSelectedEnemy);
 
+        if (changeZoneButton != null)
+            changeZoneButton.onClick.AddListener(ChangeSelectedZone);
+
         LoadCharacter();
+    }
+
+    [ContextMenu("Auto Wire UI References")]
+    public void AutoWireIfNeeded()
+    {
+        nameText ??= FindTMPText("NameText");
+        classText ??= FindTMPText("ClassText");
+        levelText ??= FindTMPText("LevelText");
+        xpText ??= FindTMPText("XPText");
+        goldText ??= FindTMPText("GoldText");
+        atkText ??= FindTMPText("ATKText");
+        defText ??= FindTMPText("DEFText");
+        hpText ??= FindTMPText("HPText");
+        critText ??= FindTMPText("CRITText");
+        powerText ??= FindTMPText("PowerText");
+        zoneText ??= FindTMPText("ZoneText");
+        statusText ??= FindTMPText("StatusText");
+
+        zoneDropdown ??= FindTMPDropdown("ZoneDropdown");
+        changeZoneButton ??= FindButton("ChangeZoneButton");
+        zoneStatusText ??= FindTMPText("ZoneStatusText");
+
+        enemyDropdown ??= FindTMPDropdown("EnemyDropdown");
+        killEnemyButton ??= FindButton("KillEnemyButton");
+        combatStatusText ??= FindTMPText("CombatStatusText");
+
+        refreshButton ??= FindButton("RefreshButton");
+        logoutButton ??= FindButton("LogoutButton");
     }
 
     private void LoadCharacter()
@@ -84,11 +126,18 @@ public class GameUI : MonoBehaviour
             {
                 if (!response.success)
                 {
-                    SetCombatStatus("Error cargando zonas: " + response.message);
+                    SetZoneStatus("Error cargando zonas: " + response.message);
                     return;
                 }
 
-                ZoneData currentZone = FindCurrentZone(response.data);
+                allZones.Clear();
+
+                if (response.data != null)
+                    allZones.AddRange(response.data);
+
+                RenderZoneDropdown();
+
+                ZoneData currentZone = FindCurrentZone(allZones.ToArray());
 
                 if (currentZone == null)
                 {
@@ -102,18 +151,129 @@ public class GameUI : MonoBehaviour
                 if (zoneText != null)
                     zoneText.text = "Zone: " + currentZoneName;
 
-                currentEnemies.Clear();
-
-                if (currentZone.enemies != null)
-                    currentEnemies.AddRange(currentZone.enemies);
-
-                RenderEnemyDropdown();
+                LoadEnemiesFromZone(currentZone);
             },
             error =>
             {
-                SetCombatStatus("Error cargando zonas: " + error);
+                SetZoneStatus("Error cargando zonas: " + error);
             }
         ));
+    }
+
+    private void RenderZoneDropdown()
+    {
+        if (zoneDropdown == null)
+            return;
+
+        zoneDropdown.ClearOptions();
+
+        List<string> options = new List<string>();
+        int selectedIndex = 0;
+
+        for (int i = 0; i < allZones.Count; i++)
+        {
+            ZoneData zone = allZones[i];
+            bool unlocked = currentCharacter != null && currentCharacter.level >= zone.requiredLevel;
+            bool isCurrent = zone.id == currentZoneId;
+
+            string label = zone.name + " | Nivel " + zone.requiredLevel;
+
+            if (isCurrent)
+                label += " | Actual";
+            else if (unlocked)
+                label += " | Disponible";
+            else
+                label += " | Bloqueada";
+
+            options.Add(label);
+
+            if (isCurrent)
+                selectedIndex = i;
+        }
+
+        zoneDropdown.AddOptions(options);
+        zoneDropdown.value = selectedIndex;
+        zoneDropdown.RefreshShownValue();
+
+        SetZoneStatus("Selecciona una zona.");
+    }
+
+    private void ChangeSelectedZone()
+    {
+        if (zoneDropdown == null || allZones.Count == 0)
+        {
+            SetZoneStatus("No hay zonas disponibles.");
+            return;
+        }
+
+        int index = zoneDropdown.value;
+
+        if (index < 0 || index >= allZones.Count)
+        {
+            SetZoneStatus("Zona inválida.");
+            return;
+        }
+
+        ZoneData selectedZone = allZones[index];
+
+        if (currentCharacter != null && currentCharacter.level < selectedZone.requiredLevel)
+        {
+            SetZoneStatus("Zona bloqueada. Requiere nivel " + selectedZone.requiredLevel + ".");
+            return;
+        }
+
+        if (selectedZone.id == currentZoneId)
+        {
+            SetZoneStatus("Ya estás en " + selectedZone.name + ".");
+            return;
+        }
+
+        SetZoneStatus("Entrando a " + selectedZone.name + "...");
+
+        ChangeZoneRequest body = new ChangeZoneRequest
+        {
+            zoneId = selectedZone.id
+        };
+
+        string json = JsonUtility.ToJson(body);
+
+        StartCoroutine(ApiClient.Instance.PostJson<ChangeZoneResponse>(
+            "/character/change-zone",
+            json,
+            response =>
+            {
+                if (!response.success)
+                {
+                    SetZoneStatus("Error: " + response.message);
+                    return;
+                }
+
+                currentCharacter = response.data;
+                currentZoneId = selectedZone.id;
+                currentZoneName = selectedZone.name;
+
+                RestoreCachedZone(currentCharacter);
+                RenderCharacter(currentCharacter);
+                RenderZoneDropdown();
+                LoadEnemiesFromZone(selectedZone);
+
+                SetZoneStatus("Entraste a " + selectedZone.name + ".");
+            },
+            error =>
+            {
+                SetZoneStatus("Error: " + error);
+            }
+        ));
+    }
+
+    private void LoadEnemiesFromZone(ZoneData zone)
+    {
+        currentEnemies.Clear();
+
+        if (zone != null && zone.enemies != null)
+            currentEnemies.AddRange(zone.enemies);
+
+        RenderEnemyDropdown();
     }
 
     private ZoneData FindCurrentZone(ZoneData[] zones)
@@ -163,6 +323,7 @@ public class GameUI : MonoBehaviour
         if (currentEnemies.Count > 0)
         {
             enemyDropdown.value = 0;
+            enemyDropdown.RefreshShownValue();
             SetCombatStatus("Enemigos cargados.");
         }
         else
@@ -219,6 +380,7 @@ public class GameUI : MonoBehaviour
                     currentCharacter = response.data.character;
                     RestoreCachedZone(currentCharacter);
                     RenderCharacter(currentCharacter);
+                    RenderZoneDropdown();
                 }
                 else
                 {
@@ -298,11 +460,37 @@ public class GameUI : MonoBehaviour
         Debug.Log(message);
     }
 
+    private void SetZoneStatus(string message)
+    {
+        if (zoneStatusText != null)
+            zoneStatusText.text = message;
+
+        Debug.Log(message);
+    }
+
     private void SetCombatStatus(string message)
     {
         if (combatStatusText != null)
             combatStatusText.text = message;
 
         Debug.Log(message);
+    }
+
+    private TMP_Text FindTMPText(string objectName)
+    {
+        GameObject obj = GameObject.Find(objectName);
+        return obj != null ? obj.GetComponent<TMP_Text>() : null;
+    }
+
+    private TMP_Dropdown FindTMPDropdown(string objectName)
+    {
+        GameObject obj = GameObject.Find(objectName);
+        return obj != null ? obj.GetComponent<TMP_Dropdown>() : null;
+    }
+
+    private Button FindButton(string objectName)
+    {
+        GameObject obj = GameObject.Find(objectName);
+        return obj != null ? obj.GetComponent<Button>() : null;
     }
 }
