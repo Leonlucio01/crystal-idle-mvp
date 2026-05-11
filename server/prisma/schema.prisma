@@ -1,0 +1,149 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+
+enum CharacterClass {
+  WARRIOR
+  MAGE
+  RANGER
+  PALADIN
+  ASSASSIN
+}
+
+enum UpgradeStat {
+  ATK
+  DEF
+  HP
+  CRIT
+}
+
+model User {
+  id           String      @id @default(cuid())
+  email        String      @unique
+  passwordHash String
+  character    Character?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model Character {
+  id            String          @id @default(cuid())
+  userId        String          @unique
+  user          User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name          String
+  class         CharacterClass  @default(WARRIOR)
+
+  level         Int             @default(1)
+  xp            Int             @default(0)
+  gold          Int             @default(0)
+  diamonds      Int             @default(0)
+
+  atk           Int             @default(10)
+  def           Int             @default(3)
+  maxHp         Int             @default(100)
+  currentHp     Int             @default(100)
+
+  critChance    Float           @default(0.05)
+  critDamage    Float           @default(1.5)
+  attackSpeed   Float           @default(1.0)
+  power         Int             @default(100)
+
+  currentZoneId String?
+  currentZone   Zone?           @relation(fields: [currentZoneId], references: [id])
+
+  lastLogoutAt  DateTime?
+
+  upgrades      StatUpgrade[]
+  combatLogs    CombatLog[]
+  offlineRewards OfflineReward[]
+
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model Zone {
+  id              String       @id
+  name            String
+  description     String
+  requiredLevel   Int          @default(1)
+
+  characters      Character[]
+  enemies         EnemyType[]
+
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+}
+
+model EnemyType {
+  id          String      @id
+  zoneId      String
+  zone        Zone        @relation(fields: [zoneId], references: [id], onDelete: Cascade)
+
+  name        String
+  maxHp       Int
+  atk         Int
+  def         Int
+  xpReward    Int
+  goldReward  Int
+  isBoss      Boolean     @default(false)
+
+  combatLogs  CombatLog[]
+
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+}
+
+model StatUpgrade {
+  id            String       @id @default(cuid())
+  characterId   String
+  character     Character    @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  stat          UpgradeStat
+  level         Int          @default(1)
+  baseCost      Int
+  currentCost   Int
+
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@unique([characterId, stat])
+}
+
+model CombatLog {
+  id            String      @id @default(cuid())
+
+  characterId   String
+  character     Character   @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  enemyTypeId   String
+  enemyType     EnemyType   @relation(fields: [enemyTypeId], references: [id], onDelete: Cascade)
+
+  damage        Int
+  isCrit        Boolean     @default(false)
+  enemyKilled   Boolean     @default(false)
+  goldEarned    Int         @default(0)
+  xpEarned      Int         @default(0)
+
+  createdAt     DateTime    @default(now())
+}
+
+model OfflineReward {
+  id              String     @id @default(cuid())
+
+  characterId     String
+  character       Character  @relation(fields: [characterId], references: [id], onDelete: Cascade)
+
+  secondsOffline  Int
+  kills           Int
+  goldEarned      Int
+  xpEarned        Int
+
+  claimedAt       DateTime   @default(now())
+}
