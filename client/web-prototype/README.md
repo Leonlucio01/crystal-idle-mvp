@@ -1,13 +1,14 @@
-# Crystal Idle Web V4 Fixes
+# Crystal Idle Web V5
 
-Cambios:
-- Desactiva temporalmente los upgrades en frontend para que no dispare endpoints inexistentes.
-- Ya no debe mostrar HTML rojo de `Cannot POST /upgrades/...`.
-- Mantiene el enemigo seleccionado después de atacar.
-- Agrega marcador visible `v4` junto al subtítulo para confirmar que reemplazaste el archivo correcto.
+Corrección directa:
 
-Cómo usar:
-1. Copia `index.html` sobre `client/web-prototype/index.html`.
-2. Cierra la pestaña anterior del navegador.
-3. Abre de nuevo el archivo o usa Ctrl+F5.
-4. Verifica que bajo el título diga: `Online Idle RPG conectado a tu API · v4`.
+- La función `upgrade()` ya no llama a ningún endpoint.
+- Los botones de upgrades solo muestran mensaje "Backend pendiente".
+- Ya no debería aparecer `Cannot POST /upgrades/...`.
+- Agrega marcador visible `v5` debajo del título.
+
+Uso:
+1. Reemplaza `client/web-prototype/index.html`.
+2. Cierra completamente la pestaña anterior.
+3. Abre de nuevo el archivo.
+4. Confirma que diga `Online Idle RPG conectado a tu API · v5`.
