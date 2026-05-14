@@ -20,9 +20,18 @@ function App() {
   const [booting, setBooting] = useState(true);
   const [error, setError] = useState('');
 
+  async function refreshZones(authToken = token) {
+    try {
+      const res = await api.zones(authToken || undefined);
+      setZones(res.data);
+    } catch (_) {
+      setZones([]);
+    }
+  }
+
   useEffect(() => {
-    api.zones().then(res => setZones(res.data)).catch(() => setZones([]));
-  }, []);
+    refreshZones(token);
+  }, [token]);
 
   useEffect(() => {
     async function boot() {
@@ -44,18 +53,22 @@ function App() {
   }, [token]);
 
   function handleAuth(payload: AuthResponse) {
+    localStorage.setItem('crystal_token', payload.token);
     setToken(payload.token);
     setCharacter(payload.character);
+    refreshZones(payload.token);
   }
 
   function logout() {
     localStorage.removeItem('crystal_token');
     setToken('');
     setCharacter(null);
+    setScreen('battle');
   }
 
   function updateCharacter(next: Character) {
     setCharacter(prev => ({ ...(prev || next), ...next }));
+    refreshZones(token);
   }
 
   if (booting) return <div className="boot-screen">Cargando Crystal Idle...</div>;

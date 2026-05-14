@@ -163,3 +163,31 @@ button { border: 0; }
   .battle-screen, .battle-bottom, .hero-screen, .inventory-screen, .zone-grid { grid-template-columns: 1fr; }
   .combat-log { grid-column: auto; grid-row: auto; }
 }
+
+.inventory-message, .empty-state {
+  margin-top: 18px;
+  color: var(--muted);
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(255,255,255,.06);
+}
+.loot-card.equipped {
+  border-color: var(--cyan);
+  box-shadow: 0 0 26px rgba(105,232,255,.18);
+}
+.loot-card.rarity-rare { border-color: rgba(105,232,255,.45); }
+.loot-card.rarity-epic { border-color: rgba(169,132,255,.62); }
+.loot-card.rarity-legendary, .loot-card.rarity-mythic { border-color: rgba(255,211,95,.74); }
+.item-actions { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+.item-actions button {
+  cursor: pointer;
+  border-radius: 12px;
+  padding: 8px 10px;
+  color: var(--text);
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.14);
+  font-weight: 900;
+}
+.item-actions button:hover:not(:disabled) { filter: brightness(1.12); }
+.item-actions button:disabled { opacity: .45; cursor: not-allowed; }
+.zone-card small + small { display: block; margin-top: 8px; }

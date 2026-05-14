@@ -1,4 +1,4 @@
-import type { AuthResponse, Character, LeaderboardRow, UpgradeStat, Zone } from './types';
+import type { AuthResponse, Character, CombatReward, InventoryItem, LeaderboardRow, UpgradeStat, Zone } from './types';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
@@ -21,6 +21,22 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
   return payload as T;
 }
 
+type CombatResponse = {
+  success: boolean;
+  data: {
+    character: Character;
+    damage?: number;
+    isCrit?: boolean;
+    enemyKilled: boolean;
+    goldEarned: number;
+    xpEarned: number;
+    diamondsEarned?: number;
+    levelsGained: number;
+    drops?: CombatReward[];
+    unlockedZone?: Zone | null;
+  };
+};
+
 export const api = {
   login(email: string, password: string) {
     return request<AuthResponse>('/auth/login', {
@@ -37,11 +53,17 @@ export const api = {
   me(token: string) {
     return request<{ success: boolean; data: Character }>('/character/me', {}, token);
   },
-  zones() {
-    return request<{ success: boolean; data: Zone[] }>('/zones');
+  zones(token?: string) {
+    return request<{ success: boolean; data: Zone[] }>('/zones', {}, token);
   },
   attack(token: string, enemyTypeId: string) {
-    return request<{ success: boolean; data: { character: Character; damage?: number; isCrit?: boolean; enemyKilled: boolean; goldEarned: number; xpEarned: number; levelsGained: number } }>('/combat/kill', {
+    return request<CombatResponse>('/combat/kill', {
+      method: 'POST',
+      body: JSON.stringify({ enemyTypeId }),
+    }, token);
+  },
+  challengeBoss(token: string, enemyTypeId: string) {
+    return request<CombatResponse>('/combat/challenge-boss', {
       method: 'POST',
       body: JSON.stringify({ enemyTypeId }),
     }, token);
@@ -58,8 +80,23 @@ export const api = {
       body: JSON.stringify({ stat }),
     }, token);
   },
+  inventory(token: string) {
+    return request<{ success: boolean; data: { items: InventoryItem[]; equipped: InventoryItem[] } }>('/inventory', {}, token);
+  },
+  equip(token: string, inventoryItemId: string) {
+    return request<{ success: boolean; data: { item: InventoryItem; character: Character } }>('/inventory/equip', {
+      method: 'POST',
+      body: JSON.stringify({ inventoryItemId }),
+    }, token);
+  },
+  sell(token: string, inventoryItemId: string, quantity = 1) {
+    return request<{ success: boolean; data: { goldEarned: number; quantity: number; character: Character } }>('/inventory/sell', {
+      method: 'POST',
+      body: JSON.stringify({ inventoryItemId, quantity }),
+    }, token);
+  },
   claimOffline(token: string) {
-    return request<{ success: boolean; data: { character: Character; kills: number; goldEarned: number; xpEarned: number } }>('/idle/claim-offline', {
+    return request<{ success: boolean; data: { character: Character; kills: number; goldEarned: number; xpEarned: number; levelsGained?: number; drops?: CombatReward[] } }>('/idle/claim-offline', {
       method: 'POST',
     }, token);
   },
