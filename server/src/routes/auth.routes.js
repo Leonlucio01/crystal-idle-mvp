@@ -10,9 +10,50 @@ function createToken(userId) {
   return jwt.sign({ userId }, process.env.JWT_SECRET, { expiresIn: "7d" });
 }
 
+const CLASS_STATS = {
+  WARRIOR: {
+    atk: 14,
+    def: 8,
+    maxHp: 140,
+    currentHp: 140,
+    critChance: 0.05,
+    critDamage: 1.5,
+  },
+  MAGE: {
+    atk: 18,
+    def: 4,
+    maxHp: 90,
+    currentHp: 90,
+    critChance: 0.08,
+    critDamage: 1.65,
+  },
+  RANGER: {
+    atk: 13,
+    def: 5,
+    maxHp: 110,
+    currentHp: 110,
+    critChance: 0.12,
+    critDamage: 1.6,
+  },
+  ASSASSIN: {
+    atk: 16,
+    def: 4,
+    maxHp: 95,
+    currentHp: 95,
+    critChance: 0.16,
+    critDamage: 1.75,
+  },
+};
+
+function normalizeClass(value) {
+  const normalized = String(value || "WARRIOR").trim().toUpperCase();
+  return CLASS_STATS[normalized] ? normalized : "WARRIOR";
+}
+
+
 router.post("/register", async (req, res) => {
   try {
-    const { email, password, characterName } = req.body;
+    const { email, password, characterName, characterClass } = req.body;
 
     if (!email || !password || !characterName) {
       return res.status(400).json({ success: false, message: "Email, password and characterName are required" });
@@ -29,14 +70,8 @@ router.post("/register", async (req, res) => {
     }
 
     const passwordHash = await bcrypt.hash(password, 10);
-    const defaultStats = {
-      atk: 10,
-      def: 3,
-      maxHp: 100,
-      currentHp: 100,
-      critChance: 0.05,
-      critDamage: 1.5,
-    };
+    const selectedClass = normalizeClass(characterClass);
+    const defaultStats = CLASS_STATS[selectedClass];
 
     const power = calculatePower(defaultStats);
 
@@ -48,6 +83,7 @@ router.post("/register", async (req, res) => {
           character: {
             create: {
               name: characterName,
+              class: selectedClass,
               atk: defaultStats.atk,
               def: defaultStats.def,
               maxHp: defaultStats.maxHp,

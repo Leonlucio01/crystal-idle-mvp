@@ -10,7 +10,7 @@
   <main class="app-shell">
     <header class="topbar">
       <div class="brand">
-        <div class="crystal-logo" aria-hidden="true"></div>
+        <img class="brand-logo" src="./assets/ui/logo_crystal_idle.png" alt="Crystal Idle" />
         <div>
           <p class="eyebrow">Crystal Idle</p>
           <h1>Web RPG</h1>
@@ -45,9 +45,29 @@
           <label for="characterName">Personaje</label>
           <input id="characterName" value="ProdHero" />
 
+          <label>Clase inicial</label>
+          <div class="class-picker" id="classPicker" aria-label="Seleccionar clase inicial">
+            <button type="button" class="class-option active" data-class="WARRIOR">
+              <img src="./assets/hero/avatar_warrior.png" alt="Warrior" />
+              <span><strong>Warrior</strong><small>Tanque balanceado</small></span>
+            </button>
+            <button type="button" class="class-option" data-class="MAGE">
+              <img src="./assets/hero/hero_mage_avatar.png" alt="Mage" />
+              <span><strong>Mage</strong><small>XP y daño mágico</small></span>
+            </button>
+            <button type="button" class="class-option" data-class="RANGER">
+              <img src="./assets/hero/hero_ranger_avatar.png" alt="Ranger" />
+              <span><strong>Ranger</strong><small>Crítico y drops</small></span>
+            </button>
+            <button type="button" class="class-option" data-class="ASSASSIN">
+              <img src="./assets/hero/avatar_assassin.png" alt="Assassin" />
+              <span><strong>Assassin</strong><small>Crítico explosivo</small></span>
+            </button>
+          </div>
+
           <div class="button-row">
-            <button id="loginBtn" class="primary">Entrar</button>
-            <button id="registerBtn" class="ghost">Registrar</button>
+            <button id="loginBtn" class="primary btn-with-icon"><img src="./assets/ui/icons/icon_unlock.png" alt="" />Entrar</button>
+            <button id="registerBtn" class="ghost btn-with-icon"><img src="./assets/ui/icons/icon_hero.png" alt="" />Registrar</button>
           </div>
 
           <p id="authStatus" class="status">Sin sesión.</p>
@@ -62,11 +82,11 @@
                 <h2>Personaje</h2>
               </div>
             </div>
-            <button id="refreshCharacterBtn" class="small ghost">Actualizar</button>
+            <button id="refreshCharacterBtn" class="small ghost btn-with-icon"><img src="./assets/ui/icons/icon_reward.png" alt="" />Actualizar</button>
           </div>
 
           <div class="hero-card">
-            <div class="avatar" aria-hidden="true"></div>
+            <div id="heroAvatar" class="avatar" aria-hidden="true"></div>
             <div class="hero-main">
               <h3 id="name">---</h3>
               <p id="className">---</p>
@@ -95,8 +115,8 @@
                 <h2 id="zone">---</h2>
               </div>
               <div class="combat-actions">
-                <button id="offlineBtn" class="ghost">Reclamar offline</button>
-                <button id="autoFarmBtn" class="auto">Auto Farm: OFF</button>
+                <button id="offlineBtn" class="ghost btn-with-icon"><img src="./assets/ui/icons/icon_offline.png" alt="" />Reclamar offline</button>
+                <button id="autoFarmBtn" class="auto btn-with-icon"><img src="./assets/ui/icons/icon_combat.png" alt="" />Auto Farm: OFF</button>
               </div>
             </div>
 
@@ -105,7 +125,7 @@
 
             <div class="battle-stage">
               <div class="monster-arena">
-                <div id="monsterSprite" class="monster" aria-hidden="true"></div>
+                <div id="monsterSprite" class="monster image-monster" aria-hidden="true"></div>
                 <div id="killPopup" class="kill-popup"></div>
                 <div id="rewardPopup" class="reward-popup"></div>
               </div>
@@ -116,7 +136,7 @@
                     <p class="eyebrow">Objetivo</p>
                     <h3 id="enemyName">---</h3>
                   </div>
-                  <button id="killBtn" class="primary attack-button">Atacar</button>
+                  <button id="killBtn" class="primary attack-button btn-with-icon"><img src="./assets/ui/icons/icon_attack.png" alt="" />Atacar</button>
                 </div>
 
                 <p id="enemyStats" class="enemy-stats">---</p>
@@ -132,13 +152,14 @@
             <p id="combatStatus" class="status big-status">Esperando acción...</p>
 
             <div id="bossPanel" class="boss-panel">
+              <img id="bossArt" class="boss-art" src="./assets/ui/icons/icon_boss.png" alt="Jefe de zona" />
               <div>
                 <p class="eyebrow">Jefe de zona</p>
                 <h3 id="bossName">---</h3>
                 <p id="bossStats" class="boss-stats">Inicia sesión para ver el jefe.</p>
                 <p id="bossReward" class="boss-reward">Derrota al jefe para desbloquear progreso.</p>
               </div>
-              <button id="bossBtn" class="boss-button">Desafiar jefe</button>
+              <button id="bossBtn" class="boss-button btn-with-icon"><img src="./assets/ui/icons/icon_boss.png" alt="" />Desafiar jefe</button>
             </div>
           </section>
 
@@ -247,7 +268,7 @@
                   <h2>Ranking</h2>
                 </div>
               </div>
-              <button id="leaderboardBtn" class="small ghost">Actualizar</button>
+              <button id="leaderboardBtn" class="small ghost btn-with-icon"><img src="./assets/ui/icons/icon_ranking.png" alt="" />Actualizar</button>
             </div>
 
             <div class="table-wrap">
@@ -282,7 +303,7 @@
         <div><span>XP</span><strong id="offlineXp">0</strong></div>
       </div>
       <div id="offlineDrops" class="offline-drops"></div>
-      <button id="closeOfflineModal" class="primary">Continuar</button>
+      <button id="closeOfflineModal" class="primary btn-with-icon"><img src="./assets/ui/icons/icon_check.png" alt="" />Continuar</button>
     </div>
   </div>
 

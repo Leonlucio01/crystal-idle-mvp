@@ -9,6 +9,7 @@ let zones = [];
 let inventoryItems = [];
 let equippedItems = [];
 let selectedInventoryFilter = "ALL";
+let selectedClass = "WARRIOR";
 let recentDrops = [];
 
 let enemyCurrentHp = 0;
@@ -18,6 +19,181 @@ let autoFarmProgressInterval = null;
 let combatRequestInFlight = false;
 let farmProgress = 0;
 const AUTO_FARM_SECONDS = 2;
+
+const ASSET = {
+  icons: "./assets/ui/icons/",
+  badges: "./assets/ui/badges/",
+  panels: "./assets/ui/panels/",
+  backgrounds: "./assets/backgrounds/",
+  enemies: "./assets/enemies/",
+  bosses: "./assets/bosses/",
+  hero: "./assets/hero/",
+  items: "./assets/items/",
+  loot: "./assets/loot/",
+  fx: "./assets/fx/",
+};
+
+const CLASS_META = {
+  WARRIOR: {
+    label: "Warrior",
+    avatar: `${ASSET.hero}avatar_warrior.png`,
+    hero: `${ASSET.hero}hero_warrior.png`,
+    role: "Tanque balanceado",
+  },
+  MAGE: {
+    label: "Mage",
+    avatar: `${ASSET.hero}hero_mage_avatar.png`,
+    hero: `${ASSET.hero}hero_mage.png`,
+    role: "Daño mágico y XP",
+  },
+  RANGER: {
+    label: "Ranger",
+    avatar: `${ASSET.hero}hero_ranger_avatar.png`,
+    hero: `${ASSET.hero}hero_ranger.png`,
+    role: "Crítico y drops",
+  },
+  ASSASSIN: {
+    label: "Assassin",
+    avatar: `${ASSET.hero}avatar_assassin.png`,
+    hero: `${ASSET.hero}hero_assassin.png`,
+    role: "Daño crítico explosivo",
+  },
+};
+
+const ZONE_ASSET_BY_ID = {
+  crystal_forest: "bg_crystal_forest.png",
+  dark_cave: "bg_dark_cave.png",
+  frozen_ruins: "bg_frozen_ruins.png",
+  volcanic_core: "bg_volcanic_core.png",
+  ancient_temple: "bg_ancient_temple.png",
+  crystal_abyss: "bg_crystal_abyss.png",
+};
+
+const ENEMY_ASSET_BY_ID = {
+  green_slime: "enemy_green_slime.png",
+  crystal_wolf: "enemy_crystal_wolf.png",
+  forest_sprite: "enemy_forest_sprite.png",
+  cave_bat: "enemy_cave_bat.png",
+  goblin_raider: "enemy_goblin_raider.png",
+  shadow_spider: "enemy_shadow_spider.png",
+  ice_spider: "enemy_ice_spider.png",
+  frost_wolf: "enemy_frost_wolf.png",
+  frozen_sentinel: "enemy_frozen_sentinel.png",
+  fire_imp: "enemy_fire_imp.png",
+  lava_beast: "enemy_lava_beast.png",
+  ancient_guardian: "enemy_ancient_guardian.png",
+};
+
+const BOSS_ASSET_BY_ID = {
+  slime_king: "boss_slime_king.png",
+  cave_troll: "boss_cave_troll.png",
+  ice_golem: "boss_ice_golem.png",
+  fire_drake: "boss_fire_drake.png",
+  crystal_wraith: "boss_crystal_wraith.png",
+  ancient_colossus: "boss_ancient_colossus.png",
+};
+
+const ITEM_ASSET_BY_ID = {
+  crystal_shard_green: `${ASSET.loot}mat_green_crystal.png`,
+  green_crystal_shard: `${ASSET.loot}mat_green_crystal.png`,
+  dark_ore: `${ASSET.loot}mat_dark_ore.png`,
+  frost_crystal: `${ASSET.loot}mat_frost_crystal.png`,
+  ancient_fragment: `${ASSET.loot}mat_ancient_fragment.png`,
+  common_zone_chest: `${ASSET.loot}chest_common.png`,
+  common_chest: `${ASSET.loot}chest_common.png`,
+  rare_chest: `${ASSET.loot}chest_rare.png`,
+  epic_chest: `${ASSET.loot}chest_epic.png`,
+  boss_chest: `${ASSET.loot}chest_boss.png`,
+  forest_wooden_sword: `${ASSET.items}item_crystal_sword.png`,
+  slime_king_blade: `${ASSET.items}item_crystal_sword.png`,
+  goblin_raider_armor: `${ASSET.items}item_crystal_armor.png`,
+  cave_troll_amulet: `${ASSET.items}item_shadow_amulet.png`,
+  frost_wolf_boots: `${ASSET.items}item_ranger_boots.png`,
+  ice_golem_core: `${ASSET.items}item_ice_golem_core.png`,
+  ice_golem_greatsword: `${ASSET.items}item_frost_spear.png`,
+  ice_golem_plate: `${ASSET.items}item_ice_armor.png`,
+  frost_crown: `${ASSET.items}item_frozen_helm.png`,
+  crystal_sword: `${ASSET.items}item_crystal_sword.png`,
+  crystal_dagger: `${ASSET.items}item_crystal_dagger.png`,
+  cave_axe: `${ASSET.items}item_cave_axe.png`,
+  frost_spear: `${ASSET.items}item_frost_spear.png`,
+  shadow_blade: `${ASSET.items}item_shadow_blade.png`,
+  forest_staff: `${ASSET.items}item_forest_staff.png`,
+  dark_helm: `${ASSET.items}item_dark_helm.png`,
+  crystal_boots: `${ASSET.items}item_crystal_boots.png`,
+  forest_ring: `${ASSET.items}item_forest_ring.png`,
+  frozen_core: `${ASSET.items}item_frozen_core.png`,
+  fire_blade: `${ASSET.items}item_fire_blade.png`,
+  ancient_staff: `${ASSET.items}item_ancient_staff.png`,
+  shadow_boots: `${ASSET.items}item_shadow_boots.png`,
+  crystal_ring: `${ASSET.items}item_crystal_ring.png`,
+  lava_core: `${ASSET.items}item_lava_core.png`,
+  wraith_amulet: `${ASSET.items}item_wraith_amulet.png`,
+};
+
+function slug(value = "") {
+  return String(value)
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
+}
+
+function classMeta(classCode) {
+  return CLASS_META[String(classCode || "WARRIOR").toUpperCase()] || CLASS_META.WARRIOR;
+}
+
+function getEnemyAsset(enemy) {
+  if (!enemy) return `${ASSET.enemies}enemy_green_slime.png`;
+  const key = enemy.id || slug(enemy.name);
+  const file = ENEMY_ASSET_BY_ID[key] || ENEMY_ASSET_BY_ID[slug(enemy.name)];
+  return `${ASSET.enemies}${file || "enemy_green_slime.png"}`;
+}
+
+function getBossAsset(enemy) {
+  if (!enemy) return `${ASSET.bosses}boss_slime_king.png`;
+  const key = enemy.id || slug(enemy.name);
+  const file = BOSS_ASSET_BY_ID[key] || BOSS_ASSET_BY_ID[slug(enemy.name)];
+  return `${ASSET.bosses}${file || "boss_slime_king.png"}`;
+}
+
+function getItemAsset(item) {
+  if (!item) return `${ASSET.icons}icon_chest.png`;
+  const idKey = item.itemDefinitionId || item.id || "";
+  const nameKey = slug(item.name || "");
+  if (ITEM_ASSET_BY_ID[idKey]) return ITEM_ASSET_BY_ID[idKey];
+  if (ITEM_ASSET_BY_ID[nameKey]) return ITEM_ASSET_BY_ID[nameKey];
+  if (item.type === "MATERIAL") return `${ASSET.loot}mat_green_crystal.png`;
+  if (item.type === "CHEST") return `${ASSET.loot}chest_common.png`;
+  if (item.slot === "WEAPON") return `${ASSET.items}item_crystal_sword.png`;
+  if (item.slot === "ARMOR") return `${ASSET.items}item_crystal_armor.png`;
+  if (item.slot === "HELMET") return `${ASSET.items}item_frozen_helm.png`;
+  if (item.slot === "BOOTS") return `${ASSET.items}item_crystal_boots.png`;
+  if (item.slot === "AMULET") return `${ASSET.items}item_ice_golem_core.png`;
+  return `${ASSET.icons}icon_reward.png`;
+}
+
+function updateZoneBackground(zone) {
+  const file = ZONE_ASSET_BY_ID[zone?.id] || ZONE_ASSET_BY_ID[slug(zone?.name)] || "bg_crystal_forest.png";
+  document.body.style.setProperty("--zone-bg", `url("${ASSET.backgrounds}${file}")`);
+}
+
+function setButtonText(button, text) {
+  if (!button) return;
+  const span = button.querySelector("span.dynamic-label");
+  if (span) span.textContent = text;
+  else if (button.querySelector("img")) {
+    const img = button.querySelector("img");
+    button.innerHTML = "";
+    button.appendChild(img);
+    const label = document.createElement("span");
+    label.className = "dynamic-label";
+    label.textContent = text;
+    button.appendChild(label);
+  } else button.textContent = text;
+}
+
 
 const $ = (id) => document.getElementById(id);
 
@@ -192,6 +368,7 @@ function renderDropFeed() {
   feed.innerHTML = recentDrops
     .map((drop) => `
       <div class="drop-item ${drop.rarity}">
+        <img class="loot-icon" src="${getItemAsset(drop)}" alt="" />
         <div>
           <strong>${drop.quantity > 1 ? `${drop.quantity}x ` : ""}${drop.name}</strong>
           <span>${drop.source}</span>
@@ -213,6 +390,7 @@ function renderEquipment() {
     const item = bySlot[slot];
     return `
       <div class="equipment-slot ${item ? String(item.rarity || "common").toLowerCase() : "empty"}">
+        <img class="equipment-icon" src="${item ? getItemAsset(item) : `${ASSET.icons}icon_lock.png`}" alt="" />
         <span>${slotLabel(slot)}</span>
         <strong>${item ? item.name : "Vacío"}</strong>
         <small>${item ? statLine(item) : "Sin bonus"}</small>
@@ -253,6 +431,7 @@ function renderInventory() {
     const qty = item.quantity > 1 ? `${item.quantity}x ` : "";
     return `
       <div class="inventory-item ${rarity}">
+        <img class="item-icon" src="${getItemAsset(item)}" alt="" />
         <div class="inventory-item-main">
           <div class="inventory-title-row">
             <strong>${qty}${item.name}</strong>
@@ -386,6 +565,8 @@ function renderZones() {
 
     const card = document.createElement("div");
     card.className = "zone-card" + (isCurrent ? " current" : "") + (!isUnlocked ? " locked" : "");
+    const zoneBg = ZONE_ASSET_BY_ID[zone.id] || ZONE_ASSET_BY_ID[slug(zone.name)] || "bg_crystal_forest.png";
+    card.style.setProperty("--zone-card-bg", `url("${ASSET.backgrounds}${zoneBg}")`);
 
     const enemyNames = (zone.enemies || [])
       .map((enemy) => enemy.isBoss ? `${enemy.name} (Boss)` : enemy.name)
@@ -402,8 +583,9 @@ function renderZones() {
       <p>${zone.description || "Zona de combate y farmeo."}</p>
       <p><strong>Enemigos:</strong> ${enemyNames || "Sin enemigos"}</p>
       <p><strong>Poder recomendado:</strong> ${formatNumber(getRecommendedPower((zone.enemies || []).find((enemy) => enemy.isBoss) || (zone.enemies || [])[0], zone))}</p>
-      <button data-zone-id="${zone.id}" ${!isUnlocked || isCurrent ? "disabled" : ""}>
-        ${isCurrent ? "Zona actual" : isUnlocked ? "Entrar" : `Bloqueada · Nivel ${zone.requiredLevel} / Poder ${formatNumber(zone.requiredPower || 0)}`}
+      <button class="btn-with-icon" data-zone-id="${zone.id}" ${!isUnlocked || isCurrent ? "disabled" : ""}>
+        <img src="${ASSET.icons}${isCurrent ? "icon_world.png" : isUnlocked ? "icon_check.png" : "icon_lock.png"}" alt="" />
+        <span>${isCurrent ? "Zona actual" : isUnlocked ? "Entrar" : `Bloqueada · Nivel ${zone.requiredLevel} / Poder ${formatNumber(zone.requiredPower || 0)}`}</span>
       </button>
     `;
 
@@ -458,7 +640,11 @@ function renderCharacter(c) {
   setTopResources(character);
 
   status("name", character?.name || "---");
-  status("className", character?.class || "---");
+  const meta = classMeta(character?.class);
+  status("className", `${meta.label} · ${meta.role}`);
+  const heroAvatar = $("heroAvatar");
+  if (heroAvatar) heroAvatar.style.backgroundImage = `url("${meta.avatar}")`;
+  updateZoneBackground(character?.currentZone || getCurrentZone());
   status("xp", formatNumber(character?.xp ?? 0));
   status("atk", formatNumber(character?.atk ?? 0));
   status("def", formatNumber(character?.def ?? 0));
@@ -510,10 +696,12 @@ function renderBossPanel() {
   const boss = getCurrentBoss();
   const button = $("bossBtn");
 
+  const bossArt = $("bossArt");
   if (!boss || !character) {
     status("bossName", "---");
     status("bossStats", "Inicia sesion para ver el jefe de la zona.");
     status("bossReward", "Derrota jefes para desbloquear nuevas zonas y cofres.");
+    if (bossArt) bossArt.src = `${ASSET.icons}icon_boss.png`;
     if (button) button.disabled = true;
     return;
   }
@@ -524,6 +712,7 @@ function renderBossPanel() {
   const ready = power >= recommendedPower;
 
   status("bossName", boss.name);
+  if (bossArt) bossArt.src = getBossAsset(boss);
   status("bossStats", `HP ${formatNumber(boss.maxHp)} | ATK ${formatNumber(boss.atk)} | DEF ${formatNumber(boss.def)} | Poder recomendado ${formatNumber(recommendedPower)}`);
   status("bossReward", nextZone
     ? `Victoria: gran recompensa, chance de cofre y progreso hacia ${nextZone.name}.`
@@ -531,7 +720,7 @@ function renderBossPanel() {
 
   if (button) {
     button.disabled = !ready;
-    button.textContent = ready ? "Desafiar jefe" : `Falta poder: ${formatNumber(recommendedPower - power)}`;
+    setButtonText(button, ready ? "Desafiar jefe" : `Falta poder: ${formatNumber(recommendedPower - power)}`);
   }
 }
 
@@ -554,9 +743,13 @@ function renderEnemy() {
     status("enemyStats", "---");
     status("enemyHpText", "0 / 0");
     $("enemyHpFill").style.width = "0%";
+    const monster = $("monsterSprite");
+    if (monster) monster.style.backgroundImage = "";
     return;
   }
 
+  const monster = $("monsterSprite");
+  if (monster) monster.style.backgroundImage = `url("${getEnemyAsset(selectedEnemy)}")`;
   status("enemyName", selectedEnemy.name);
   status("enemyStats", `HP ${formatNumber(selectedEnemy.maxHp)} | ATK ${formatNumber(selectedEnemy.atk)} | DEF ${formatNumber(selectedEnemy.def)} | XP ${formatNumber(selectedEnemy.xpReward)} | Gold ${formatNumber(selectedEnemy.goldReward)}`);
   renderEnemyHp();
@@ -609,6 +802,7 @@ async function register() {
         email: $("email").value.trim(),
         password: $("password").value,
         characterName: $("characterName").value.trim(),
+        characterClass: selectedClass,
       }),
     });
 
@@ -769,7 +963,7 @@ async function challengeBoss() {
 function updateFarmButton() {
   const button = $("autoFarmBtn");
   if (!button) return;
-  button.textContent = autoFarmEnabled ? "Auto Farm: ON" : "Auto Farm: OFF";
+  setButtonText(button, autoFarmEnabled ? "Auto Farm: ON" : "Auto Farm: OFF");
   button.classList.toggle("active", autoFarmEnabled);
 }
 
@@ -857,6 +1051,7 @@ function showOfflineModal(reward) {
     offlineDrops.innerHTML = drops.length
       ? drops.map((drop) => `
         <div class="drop-item ${String(drop.rarity || "common").toLowerCase()}">
+          <img class="loot-icon" src="${getItemAsset(drop)}" alt="" />
           <div><strong>${drop.quantity || 1}x ${drop.name}</strong><span>${itemTypeLabel(drop)} · Recompensa offline</span></div>
           <em class="drop-rarity">${drop.rarity || "common"}</em>
         </div>
@@ -1010,6 +1205,14 @@ document.querySelectorAll(".inventoryFilter").forEach((button) => {
   };
 });
 
+document.querySelectorAll(".class-option").forEach((button) => {
+  button.onclick = () => {
+    selectedClass = button.dataset.class || "WARRIOR";
+    document.querySelectorAll(".class-option").forEach((item) => item.classList.toggle("active", item === button));
+    addLog(`Clase seleccionada: ${classMeta(selectedClass).label}.`);
+  };
+});
+
 $("enemySelect").onchange = () => {
   const enemies = getNormalEnemies(
     character?.currentZone?.enemies ||
@@ -1026,6 +1229,7 @@ $("enemySelect").onchange = () => {
 (async () => {
   addLog("Cliente web iniciado.");
   setTopResources(null);
+  updateZoneBackground({ id: "crystal_forest" });
   await loadZones();
   await loadLeaderboard();
 
